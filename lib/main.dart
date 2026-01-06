@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get_navigation/src/root/get_material_app.dart';
 import 'package:restro_deliveryapp/Auth/view/Login.dart';
+import 'package:restro_deliveryapp/Auth/view/Splash.dart';
 
 void main() {
   SystemChrome.setSystemUIOverlayStyle(
@@ -24,7 +25,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
       ),
-      home: const DeliveryLoginScreen(),
+      home: const SplashScreen(),
       debugShowCheckedModeBanner: false,
     );
   }

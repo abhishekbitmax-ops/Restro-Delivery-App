@@ -20,8 +20,8 @@ class _BottomNavBarState extends State<BottomNavBar> {
   final screens = [
     const DeliveryDashboardScreen(),
     const MyOrdersScreen(),
-    const DeliveryEarningsScreen(), // placeholder
-    const DeliveryProfileScreen(), // placeholder
+    const DeliveryEarningsScreen(),
+    DeliveryProfileScreen(),
   ];
 
   @override
@@ -30,38 +30,61 @@ class _BottomNavBarState extends State<BottomNavBar> {
     currentIndex = widget.initialIndex;
   }
 
+  /// 🔙 BACK PRESS HANDLING
+  Future<bool> _onWillPop() async {
+    if (currentIndex != 0) {
+      // If not on Dashboard → go to Dashboard
+      setState(() {
+        currentIndex = 0;
+      });
+      return false; // ❌ app exit mat karo
+    }
+    // If already on Dashboard → allow app exit
+    return true;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: screens[currentIndex],
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          border: Border(top: BorderSide(color: Colors.grey.shade200)),
-        ),
-        child: BottomNavigationBar(
-          currentIndex: currentIndex,
-          onTap: (index) {
-            setState(() => currentIndex = index);
-          },
-          selectedItemColor: const Color(0xFF8B0000),
-          unselectedItemColor: Colors.black54,
-          selectedLabelStyle: GoogleFonts.poppins(
-            fontWeight: FontWeight.w600,
-            fontSize: 11,
+    return WillPopScope(
+      onWillPop: _onWillPop,
+      child: Scaffold(
+        body: screens[currentIndex],
+        bottomNavigationBar: Container(
+          decoration: BoxDecoration(
+            border: Border(top: BorderSide(color: Colors.grey.shade200)),
           ),
-          unselectedLabelStyle: GoogleFonts.poppins(fontSize: 10),
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.list_alt),
-              label: "Orders",
+          child: BottomNavigationBar(
+            currentIndex: currentIndex,
+            onTap: (index) {
+              setState(() => currentIndex = index);
+            },
+            selectedItemColor: const Color(0xFF8B0000),
+            unselectedItemColor: Colors.black54,
+            selectedLabelStyle: GoogleFonts.poppins(
+              fontWeight: FontWeight.w600,
+              fontSize: 11,
             ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.currency_rupee),
-              label: "Earnings",
-            ),
-            BottomNavigationBarItem(icon: Icon(Icons.person), label: "Profile"),
-          ],
+            unselectedLabelStyle:
+                GoogleFonts.poppins(fontSize: 10),
+            items: const [
+              BottomNavigationBarItem(
+                icon: Icon(Icons.home),
+                label: "Home",
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.list_alt),
+                label: "Orders",
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.currency_rupee),
+                label: "Earnings",
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.person),
+                label: "Profile",
+              ),
+            ],
+          ),
         ),
       ),
     );

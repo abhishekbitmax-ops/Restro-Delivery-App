@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:get/get_core/src/get_main.dart';
-import 'package:get/get_navigation/get_navigation.dart';
+import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:restro_deliveryapp/Auth/view/Orderpickup.dart';
 
@@ -34,94 +33,158 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
     },
   ];
 
+  List<Map<String, dynamic>> get filteredOrders {
+    return orders
+        .where((order) =>
+            selectedTab == 0 ? order["active"] == true : order["active"] == false)
+        .toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
-        statusBarColor: Color(0xFF8B0000),
+        statusBarColor: Color(0xFF7A0000),
         statusBarIconBrightness: Brightness.light,
       ),
     );
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,
-      body: SafeArea(
-        top: false,
-        child: Column(
-          children: [
-            //  HEADER
-            Stack(
-              alignment: Alignment.center,
+      backgroundColor: const Color(0xFFF6F6F6),
+      body: Column(
+        children: [
+          /// 🔥 MODERN HEADER WITH LOGO
+          Container(
+            padding: const EdgeInsets.fromLTRB(16, 44, 16, 20),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Color(0xFF7A0000),
+                  Color(0xFFB11212),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black26,
+                  blurRadius: 12,
+                  offset: Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
               children: [
+                // 🍽️ APP LOGO
                 Container(
-                  width: double.infinity,
-                  height: 100,
-                  decoration: const BoxDecoration(color: Color(0xFF8B0000)),
-                  child: Center(
-                    child: Text(
-                      "My Orders",
-                      style: GoogleFonts.poppins(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                  height: 42,
+                  width: 42,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        blurRadius: 10,
+                        color: Colors.black.withOpacity(0.3),
+                      ),
+                    ],
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(6),
+                    child: ClipOval(
+                      child: Image.asset(
+                        'assets/images/restro_logo.jpg',
+                        fit: BoxFit.cover,
                       ),
                     ),
                   ),
                 ),
-                Positioned(
-                  left: 16,
-                  child: IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
+
+                const SizedBox(width: 12),
+
+                Text(
+                  "My Orders",
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
                   ),
                 ),
+
+                const Spacer(),
+
+                // IconButton(
+                //   icon: const Icon(Icons.arrow_back, color: Colors.white),
+                //   onPressed: () => Navigator.pop(context),
+                // ),
               ],
             ),
+          ),
 
-            const SizedBox(height: 16),
-            // TAB BAR
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+          const SizedBox(height: 20),
+
+          /// 🔘 TABS
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    blurRadius: 12,
+                    color: Colors.black.withOpacity(0.05),
+                  ),
+                ],
+              ),
               child: Row(
                 children: [
-                  _tabButton("Active", 0),
-                  const SizedBox(width: 10),
+                  _tabButton("Active Orders", 0),
+                  const SizedBox(width: 6),
                   _tabButton("Past Orders", 1),
                 ],
               ),
             ),
+          ),
 
-            const SizedBox(height: 16),
+          const SizedBox(height: 20),
 
-            //  ORDER LIST
-            Expanded(
-              child: ListView.builder(
-                itemCount: orders.length,
-                itemBuilder: (context, index) {
-                  final order = orders[index];
-                  return _orderCard(order);
-                },
-              ),
-            ),
-          ],
-        ),
+          /// 📦 ORDER LIST
+          Expanded(
+            child: filteredOrders.isEmpty
+                ? _emptyState()
+                : ListView.builder(
+                    itemCount: filteredOrders.length,
+                    itemBuilder: (context, index) {
+                      return _orderCard(filteredOrders[index]);
+                    },
+                  ),
+          ),
+        ],
       ),
     );
   }
 
-  //  Tab Button
+  /// 🔘 TAB BUTTON
   Widget _tabButton(String label, int index) {
-    bool active = selectedTab == index;
+    final active = selectedTab == index;
+
     return Expanded(
-      child: InkWell(
+      child: GestureDetector(
         onTap: () => setState(() => selectedTab = index),
-        child: Container(
-          height: 44,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          height: 42,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: active ? const Color(0xFF8B0000) : Colors.white,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.grey.shade300),
+            gradient: active
+                ? const LinearGradient(
+                    colors: [Color(0xFF8B0000), Color(0xFFB11212)],
+                  )
+                : null,
+            color: active ? null : Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
             label,
@@ -136,23 +199,25 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
     );
   }
 
-  // 🧾 Order Card
+  /// 🧾 ORDER CARD
   Widget _orderCard(Map<String, dynamic> order) {
-    return InkWell(
+    return GestureDetector(
       onTap: () {
         Get.to(() => const PickupScreen(), arguments: order);
       },
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        padding: const EdgeInsets.all(14),
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
+          gradient: LinearGradient(
+            colors: [Colors.white, Colors.red.shade50],
+          ),
+          borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              blurRadius: 6,
-              color: Colors.grey.shade200,
-              offset: const Offset(2, 2),
+              blurRadius: 18,
+              color: Colors.black.withOpacity(0.06),
+              offset: const Offset(0, 10),
             ),
           ],
         ),
@@ -161,86 +226,47 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
           children: [
             Row(
               children: [
-                const Icon(Icons.person, size: 20, color: Colors.black54),
+                const Icon(Icons.person, size: 20),
                 const SizedBox(width: 8),
                 Text(
                   order["name"],
                   style: GoogleFonts.poppins(
                     fontSize: 14,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
                 const Spacer(),
-                if (order["active"])
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.green.shade100,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      "ACCEPTED",
-                      style: GoogleFonts.poppins(
-                        fontSize: 10,
-                        color: Colors.green.shade700,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  )
-                else
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.shade100,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      order["status"].toString().toUpperCase(),
-                      style: GoogleFonts.poppins(
-                        fontSize: 10,
-                        color: Colors.deepOrange,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
+                _statusBadge(order),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             Row(
               children: [
-                const Icon(
-                  Icons.location_on,
-                  size: 14,
-                  color: Colors.redAccent,
-                ),
-                const SizedBox(width: 4),
+                const Icon(Icons.location_on,
+                    size: 14, color: Colors.redAccent),
+                const SizedBox(width: 6),
                 Expanded(
                   child: Text(
                     order["address"],
                     style: GoogleFonts.poppins(
-                      fontSize: 11,
+                      fontSize: 12,
                       color: Colors.black54,
                     ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 8),
             Text(
               order["time"],
-              style: GoogleFonts.poppins(fontSize: 10, color: Colors.black38),
+              style:
+                  GoogleFonts.poppins(fontSize: 10, color: Colors.black38),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 14),
             Row(
               children: [
                 Text(
-                  "Order Amount:",
+                  "Order Amount",
                   style: GoogleFonts.poppins(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
@@ -250,7 +276,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                 Text(
                   order["price"],
                   style: GoogleFonts.poppins(
-                    fontSize: 13,
+                    fontSize: 14,
                     fontWeight: FontWeight.bold,
                     color: const Color(0xFF8B0000),
                   ),
@@ -259,6 +285,48 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// 🏷️ STATUS BADGE
+  Widget _statusBadge(Map<String, dynamic> order) {
+    final isActive = order["active"] == true;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      decoration: BoxDecoration(
+        color: isActive ? Colors.green.shade100 : Colors.orange.shade100,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        isActive ? "ACTIVE" : order["status"].toUpperCase(),
+        style: GoogleFonts.poppins(
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          color: isActive ? Colors.green : Colors.deepOrange,
+        ),
+      ),
+    );
+  }
+
+  /// 📭 EMPTY STATE
+  Widget _emptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.inbox_outlined,
+              size: 60, color: Colors.grey.shade400),
+          const SizedBox(height: 14),
+          Text(
+            "No orders found",
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              color: Colors.black54,
+            ),
+          ),
+        ],
       ),
     );
   }

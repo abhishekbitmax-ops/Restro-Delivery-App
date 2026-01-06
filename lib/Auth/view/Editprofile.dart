@@ -12,7 +12,6 @@ class Editprofile extends StatefulWidget {
 }
 
 class _EditprofileState extends State<Editprofile> {
-  // Controllers
   final partnerIdCtrl = TextEditingController();
   final nameCtrl = TextEditingController();
   final phoneCtrl = TextEditingController();
@@ -20,209 +19,187 @@ class _EditprofileState extends State<Editprofile> {
   final vehicleNumberCtrl = TextEditingController();
   final accountNumberCtrl = TextEditingController();
   final ifscCtrl = TextEditingController();
-
   final aadhaarIdCtrl = TextEditingController();
   final panIdCtrl = TextEditingController();
   final dlIdCtrl = TextEditingController();
 
   String vehicleType = "Bike";
   File? profileImageFile;
-
   final ImagePicker picker = ImagePicker();
 
-  Future<void> _pickProfileImage() async {
-    final ImageSource? source = await showModalBottomSheet<ImageSource>(
-      context: context,
-      builder: (ctx) => Wrap(
-        children: [
-          ListTile(
-            leading: const Icon(Icons.camera_alt),
-            title: const Text("Camera"),
-            onTap: () => Navigator.pop(ctx, ImageSource.camera),
-          ),
-          ListTile(
-            leading: const Icon(Icons.photo),
-            title: const Text("Gallery"),
-            onTap: () => Navigator.pop(ctx, ImageSource.gallery),
-          ),
-        ],
-      ),
-    );
+Future<void> _pickImage(Function(File) onPicked) async {
+  final source = await showModalBottomSheet<ImageSource>(
+    context: context,
+    backgroundColor: Colors.transparent, // 🔥 for rounded card look
+    isScrollControlled: true,
+    builder: (ctx) {
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 20), // 👈 bottom gap
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 10),
 
-    if (source != null) {
-      final picked = await picker.pickImage(source: source, imageQuality: 70);
-      if (picked != null) {
-        setState(() {
-          profileImageFile = File(picked.path);
-        });
-      }
+                /// DRAG HANDLE
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+
+                const SizedBox(height: 14),
+
+                ListTile(
+                  leading: const Icon(Icons.camera_alt),
+                  title: const Text("Camera"),
+                  onTap: () => Navigator.pop(ctx, ImageSource.camera),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.photo),
+                  title: const Text("Gallery"),
+                  onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+                ),
+
+                const SizedBox(height: 10),
+              ],
+            ),
+          ),
+        ),
+      );
+    },
+  );
+
+  if (source != null) {
+    final picked = await picker.pickImage(
+      source: source,
+      imageQuality: 70,
+    );
+    if (picked != null) {
+      onPicked(File(picked.path));
     }
   }
+}
 
-  Future<void> _pickKycImage(String type) async {
-    final ImageSource? source = await showModalBottomSheet<ImageSource>(
-      context: context,
-      builder: (ctx) => Wrap(
-        children: [
-          ListTile(
-            leading: const Icon(Icons.camera_alt),
-            title: const Text("Camera"),
-            onTap: () => Navigator.pop(ctx, ImageSource.camera),
-          ),
-          ListTile(
-            leading: const Icon(Icons.photo),
-            title: const Text("Gallery"),
-            onTap: () => Navigator.pop(ctx, ImageSource.gallery),
-          ),
-        ],
-      ),
-    );
-
-    if (source != null) {
-      final picked = await picker.pickImage(source: source, imageQuality: 70);
-      if (picked != null) {
-        debugPrint("$type image selected → ${picked.path}");
-      }
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
-    SystemChrome.setSystemUIOverlayStyle(
-      const SystemUiOverlayStyle(
-        statusBarColor: Color(0xFF8B0000),
-        statusBarIconBrightness: Brightness.light,
-      ),
-    );
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+      statusBarColor: Color(0xFF8B0000),
+      statusBarIconBrightness: Brightness.light,
+    ));
 
     return Scaffold(
       backgroundColor: Colors.white,
-      extendBodyBehindAppBar: true,
       body: SingleChildScrollView(
-        padding: const EdgeInsets.only(bottom: 50),
+        padding: const EdgeInsets.only(bottom: 40),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
+            /// 🔥 HEADER
             Container(
               width: double.infinity,
               padding: EdgeInsets.only(
-                top: MediaQuery.of(context).padding.top + 18,
-                bottom: 24,
+                top: MediaQuery.of(context).padding.top + 16,
+                bottom: 26,
               ),
-              decoration: const BoxDecoration(color: Color(0xFF8B0000)),
-              child: Stack(
-                children: [
-                  // ⬅ BACK BUTTON
-                  Positioned(
-                    left: 16,
-                    top: 10,
-                    child: InkWell(
-                      onTap: () => Navigator.pop(context),
-                      child: Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white,
-                        ),
-                        child: const Icon(
-                          Icons.arrow_back,
-                          color: Color(0xFF8B0000),
-                          size: 24,
-                        ),
-                      ),
-                    ),
-                  ),
+              decoration: const BoxDecoration(
+                color: Color(0xFF8B0000),
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(26),
+                  bottomRight: Radius.circular(26),
+                ),
+              ),
+              child:Stack(
+  children: [
+    /// ⬅ BACK BUTTON (LEFT FIXED)
+    Positioned(
+      left: 16,
+      top: 6,
+      child: InkWell(
+        onTap: () => Navigator.pop(context),
+        child: const CircleAvatar(
+          radius: 18,
+          backgroundColor: Colors.white,
+          child: Icon(
+            Icons.arrow_back,
+            color: Color(0xFF8B0000),
+          ),
+        ),
+      ),
+    ),
 
-                  // TITLE CENTER
-                  Center(
-                    child: Column(
-                      children: [
-                        Text(
-                          "Swaad",
-                          style: GoogleFonts.poppins(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                        Text(
-                          "of Grandmaa",
-                          style: GoogleFonts.poppins(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.amber,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          "Bringing Grandma’s love to every doorstep",
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w400,
-                            color: Colors.white70,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+    /// ✅ LOGO + TITLE PERFECT CENTER
+    Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 6),
+          CircleAvatar(
+            radius: 34,
+            backgroundColor: Colors.white,
+            child: Padding(
+              padding: const EdgeInsets.all(6),
+              child: Image.asset(
+                "assets/images/restro_logo.jpg",
+                fit: BoxFit.contain,
               ),
             ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            "Swaad of Grandmaa",
+            style: GoogleFonts.poppins(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+         
+        ],
+      ),
+    ),
+  ],
+),
 
-            const SizedBox(height: 26),
-
-            // Title
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                children: [
-                  const Icon(Icons.app_registration, color: Color(0xFF8B0000)),
-                  const SizedBox(width: 8),
-                  Text(
-                    "Delivery Partner Edit Profile",
-                    style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
             ),
 
-            const SizedBox(height: 30),
+            const SizedBox(height: 28),
 
-            // Profile Image Upload
+            /// PROFILE IMAGE
             Center(
               child: Stack(
                 children: [
                   CircleAvatar(
-                    radius: 48,
+                    radius: 52,
                     backgroundColor: Colors.grey.shade200,
-                    backgroundImage: profileImageFile != null
-                        ? FileImage(profileImageFile!)
-                        : null,
+                    backgroundImage:
+                        profileImageFile != null ? FileImage(profileImageFile!) : null,
                     child: profileImageFile == null
-                        ? const Icon(
-                            Icons.person,
-                            size: 42,
-                            color: Colors.black45,
-                          )
+                        ? const Icon(Icons.person, size: 46, color: Colors.black45)
                         : null,
                   ),
                   Positioned(
                     bottom: 0,
                     right: 0,
-                    child: CircleAvatar(
-                      radius: 17,
-                      backgroundColor: const Color(0xFF8B0000),
-                      child: IconButton(
-                        padding: EdgeInsets.zero,
-                        icon: const Icon(
-                          Icons.camera_alt,
-                          size: 18,
-                          color: Colors.white,
-                        ),
-                        onPressed: _pickProfileImage,
+                    child: GestureDetector(
+                      onTap: () {
+                        _pickImage((file) {
+                          setState(() => profileImageFile = file);
+                        });
+                      },
+                      child: const CircleAvatar(
+                        radius: 18,
+                        backgroundColor: Color(0xFF8B0000),
+                        child: Icon(Icons.camera_alt, size: 18, color: Colors.white),
                       ),
                     ),
                   ),
@@ -230,126 +207,63 @@ class _EditprofileState extends State<Editprofile> {
               ),
             ),
 
-            const SizedBox(height: 40),
+            const SizedBox(height: 36),
 
-            // Partner Details
-            _buildSectionTitle("Partner Details"),
-            _buildInputField(
-              partnerIdCtrl,
-              Icons.badge_outlined,
-              "Enter Partner ID",
-            ),
-            _buildInputField(nameCtrl, Icons.person_outline, "Full Name"),
-            _buildInputField(phoneCtrl, Icons.phone_outlined, "Mobile Number"),
-            _buildInputField(emailCtrl, Icons.email_outlined, "Email Address"),
+            _section("Partner Details"),
+            _field(partnerIdCtrl, Icons.badge_outlined, "Partner ID"),
+            _field(nameCtrl, Icons.person_outline, "Full Name"),
+            _field(phoneCtrl, Icons.phone_outlined, "Mobile Number"),
+            _field(emailCtrl, Icons.email_outlined, "Email Address"),
 
-            const SizedBox(height: 26),
+            const SizedBox(height: 28),
 
-            // Vehicle Info
-            _buildSectionTitle("Vehicle Information"),
+            _section("Vehicle Information"),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 8),
               child: DropdownButtonFormField<String>(
                 value: vehicleType,
-                isExpanded: true,
-                decoration: _inputDecoration(
-                  Icons.directions_bike,
-                  "Select Vehicle Type",
-                ),
-                items: ["Bike", "Bicycle"].map((e) {
-                  return DropdownMenuItem(value: e, child: Text(e));
-                }).toList(),
-                onChanged: (val) => setState(() => vehicleType = val ?? "Bike"),
+                decoration: _decoration(Icons.directions_bike, "Vehicle Type"),
+                items: ["Bike", "Bicycle"]
+                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                    .toList(),
+                onChanged: (v) => setState(() => vehicleType = v!),
               ),
             ),
-            _buildInputField(
-              vehicleNumberCtrl,
-              Icons.confirmation_number_outlined,
-              "Vehicle Number",
-            ),
+            _field(vehicleNumberCtrl, Icons.confirmation_number_outlined, "Vehicle Number"),
 
-            const SizedBox(height: 32),
+            const SizedBox(height: 28),
 
-            // KYC Upload
-            _buildSectionTitle("Upload Documents (KYC)"),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 22),
-              child: Column(
-                children: [
-                  _buildUploadRow(
-                    "Aadhaar Card",
-                    onTap: () => _pickKycImage("Aadhaar"),
-                  ),
-                  _buildInputField(
-                    aadhaarIdCtrl,
-                    Icons.credit_card,
-                    "Enter Aadhaar ID Number",
-                  ),
-                  _buildUploadRow(
-                    "PAN Card",
-                    onTap: () => _pickKycImage("PAN"),
-                  ),
-                  _buildInputField(
-                    panIdCtrl,
-                    Icons.perm_identity,
-                    "Enter PAN ID Number",
-                  ),
-                  _buildUploadRow(
-                    "Driving License",
-                    onTap: () => _pickKycImage("DL"),
-                  ),
-                  _buildInputField(
-                    dlIdCtrl,
-                    Icons.drive_eta_outlined,
-                    "Enter License ID Number",
-                  ),
-                ],
-              ),
-            ),
+            _section("Upload Documents (KYC)"),
+            _upload("Aadhaar Card", () => _pickImage((_) {})),
+            _field(aadhaarIdCtrl, Icons.credit_card, "Aadhaar Number"),
+            _upload("PAN Card", () => _pickImage((_) {})),
+            _field(panIdCtrl, Icons.perm_identity, "PAN Number"),
+            _upload("Driving License", () => _pickImage((_) {})),
+            _field(dlIdCtrl, Icons.drive_eta_outlined, "License Number"),
 
-            const SizedBox(height: 32),
+            const SizedBox(height: 28),
 
-            // Bank Info
-            _buildSectionTitle("Bank Information"),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 22),
-              child: Column(
-                children: [
-                  _buildInputField(
-                    accountNumberCtrl,
-                    Icons.account_balance_wallet_outlined,
-                    "Account Number",
-                  ),
-                  _buildInputField(
-                    ifscCtrl,
-                    Icons.account_balance_outlined,
-                    "IFSC Code",
-                  ),
-                ],
-              ),
-            ),
+            _section("Bank Information"),
+            _field(accountNumberCtrl, Icons.account_balance_wallet_outlined, "Account Number"),
+            _field(ifscCtrl, Icons.account_balance_outlined, "IFSC Code"),
 
-            const SizedBox(height: 44),
+            const SizedBox(height: 36),
 
-            // Submit Button
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 22),
               child: SizedBox(
+                height: 56,
                 width: double.infinity,
-                height: 58,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF8B0000),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
-                    elevation: 4,
                   ),
-                  onPressed: () {
-                    debugPrint("Form Submitted!");
-                  },
+                  onPressed: () {},
                   child: Text(
-                    "Submit Changes",
+                    "Save Changes",
                     style: GoogleFonts.poppins(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
@@ -360,32 +274,6 @@ class _EditprofileState extends State<Editprofile> {
               ),
             ),
 
-            const SizedBox(height: 20),
-
-            // Terms
-            Center(
-              child: Text.rich(
-                TextSpan(
-                  style: GoogleFonts.poppins(
-                    fontSize: 11,
-                    color: Colors.black54,
-                  ),
-                  children: const [
-                    TextSpan(text: "By proceeding, you agree to the "),
-                    TextSpan(
-                      text: "Terms & Conditions",
-                      style: TextStyle(
-                        color: Color(0xFF8B0000),
-                        fontWeight: FontWeight.w600,
-                        decoration: TextDecoration.underline,
-                      ),
-                    ),
-                  ],
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-
             const SizedBox(height: 30),
           ],
         ),
@@ -393,89 +281,60 @@ class _EditprofileState extends State<Editprofile> {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      child: Text(
-        title,
-        style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w600),
-      ),
-    );
-  }
-
-  Widget _buildInputField(
-    TextEditingController ctrl,
-    IconData icon,
-    String hint,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 8),
-      child: TextField(
-        controller: ctrl,
-        decoration: _inputDecoration(icon, hint),
-      ),
-    );
-  }
-
-  Widget _buildUploadRow(String label, {void Function()? onTap}) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        decoration: BoxDecoration(
-          color: Colors.grey.shade50,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.shade200),
+  /// COMPONENTS
+  Widget _section(String text) => Padding(
+        padding: const EdgeInsets.fromLTRB(22, 8, 22, 6),
+        child: Text(
+          text,
+          style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w600),
         ),
-        child: Row(
-          children: [
-            const Icon(
-              Icons.upload_file_outlined,
-              size: 22,
-              color: Colors.black45,
+      );
+
+  Widget _field(TextEditingController c, IconData i, String h) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 8),
+        child: TextField(controller: c, decoration: _decoration(i, h)),
+      );
+
+  Widget _upload(String title, VoidCallback onTap) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 6),
+        child: InkWell(
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade200),
+              color: Colors.grey.shade50,
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                label,
-                style: GoogleFonts.poppins(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
+            child: Row(
+              children: [
+                const Icon(Icons.upload_file_outlined, size: 22),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: GoogleFonts.poppins(fontSize: 13),
+                  ),
                 ),
-              ),
+                const Icon(Icons.arrow_forward_ios, size: 14),
+              ],
             ),
-            const Icon(
-              Icons.arrow_forward_ios,
-              size: 14,
-              color: Colors.black38,
-            ),
-          ],
+          ),
         ),
-      ),
-    );
-  }
+      );
 
-  InputDecoration _inputDecoration(IconData icon, String hint) {
-    return InputDecoration(
-      filled: true,
-      fillColor: Colors.grey.shade50,
-      hintText: hint,
-      prefixIcon: Icon(icon, color: Colors.black45, size: 20),
-      hintStyle: GoogleFonts.poppins(fontSize: 12, color: Colors.black38),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide.none,
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.grey.shade200),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFF8B0000), width: 1.3),
-      ),
-    );
-  }
+  InputDecoration _decoration(IconData icon, String hint) => InputDecoration(
+        filled: true,
+        fillColor: Colors.grey.shade50,
+        hintText: hint,
+        prefixIcon: Icon(icon, size: 20),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFF8B0000), width: 1.2),
+        ),
+      );
 }
