@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:restro_deliveryapp/Auth/controller/Authcontroller.dart';
 import 'package:restro_deliveryapp/Auth/view/Orderpickup.dart';
 import 'package:restro_deliveryapp/Auth/view/Orders.dart';
 
@@ -16,6 +17,9 @@ class DeliveryDashboardScreen extends StatefulWidget {
 class _DeliveryDashboardScreenState extends State<DeliveryDashboardScreen> {
   final bool hasActiveOrder = true;
   bool isOnline = true;
+
+  /// GetX Auth Controller
+  final AuthController auth = Get.put(AuthController());
 
   Widget _statusCard({
     required String title,
@@ -171,46 +175,56 @@ class _DeliveryDashboardScreenState extends State<DeliveryDashboardScreen> {
 
                       const Spacer(),
 
-                      /// ONLINE/OFFLINE SWITCH
+                      /// 🔥 ONLINE/OFFLINE SWITCH (API INTEGRATED)
                       GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            isOnline = !isOnline;
-                          });
-                        },
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 250),
-                          width: 60,
-                          height: 33,
-                          padding: const EdgeInsets.all(3),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(20),
-                            color: isOnline
-                                ? const Color(0xFF1E6F4F)
-                                : const Color(0xFF3A3A3A),
-                          ),
-                          child: AnimatedAlign(
-                            duration: const Duration(milliseconds: 250),
-                            alignment: isOnline
-                                ? Alignment.centerRight
-                                : Alignment.centerLeft,
-                            child: Container(
-                              width: 20,
-                              height: 20,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Colors.white,
-                                boxShadow: [
-                                  BoxShadow(
-                                    blurRadius: 4,
-                                    color: Colors.black.withOpacity(0.25),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
+  onTap: () async {
+    bool newStatus = !isOnline;
+
+    // Store previous state (in case API fails)
+    bool previous = isOnline;
+
+    // Call the API
+    await auth.toggleOnlineStatus(newStatus);
+
+    // Update UI only after API call completes
+    setState(() {
+      isOnline = newStatus;
+    });
+  },
+  child: AnimatedContainer(
+    duration: const Duration(milliseconds: 250),
+    width: 60,
+    height: 33,
+    padding: const EdgeInsets.all(3),
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(20),
+      color: isOnline
+          ? const Color(0xFF1E6F4F)
+          : const Color(0xFF3A3A3A),
+    ),
+    child: AnimatedAlign(
+      duration: const Duration(milliseconds: 250),
+      alignment: isOnline
+          ? Alignment.centerRight
+          : Alignment.centerLeft,
+      child: Container(
+        width: 20,
+        height: 20,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              blurRadius: 4,
+              color: Colors.black.withOpacity(0.25),
+            ),
+          ],
+        ),
+      ),
+    ),
+  ),
+),
+
                     ],
                   ),
                   const SizedBox(height: 24),
@@ -295,13 +309,10 @@ class _DeliveryDashboardScreenState extends State<DeliveryDashboardScreen> {
                                   Row(
                                     children: [
                                       Container(
-                                        padding:
-                                            const EdgeInsets.symmetric(
-                                                horizontal: 16,
-                                                vertical: 6),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 16, vertical: 6),
                                         decoration: BoxDecoration(
-                                          color:
-                                              const Color(0xFF8B0000),
+                                          color: const Color(0xFF8B0000),
                                           borderRadius:
                                               BorderRadius.circular(14),
                                         ),
@@ -310,8 +321,7 @@ class _DeliveryDashboardScreenState extends State<DeliveryDashboardScreen> {
                                           style: GoogleFonts.poppins(
                                             fontSize: 11,
                                             color: Colors.white,
-                                            fontWeight:
-                                                FontWeight.w600,
+                                            fontWeight: FontWeight.w600,
                                           ),
                                         ),
                                       ),
@@ -343,18 +353,15 @@ class _DeliveryDashboardScreenState extends State<DeliveryDashboardScreen> {
                                   Row(
                                     children: [
                                       Container(
-                                        padding:
-                                            const EdgeInsets.all(7),
+                                        padding: const EdgeInsets.all(7),
                                         decoration: BoxDecoration(
                                           shape: BoxShape.circle,
-                                          color:
-                                              Colors.red.shade100,
+                                          color: Colors.red.shade100,
                                         ),
                                         child: const Icon(
                                           Icons.location_on,
                                           size: 16,
-                                          color:
-                                              Colors.redAccent,
+                                          color: Colors.redAccent,
                                         ),
                                       ),
                                       const SizedBox(width: 12),
@@ -363,8 +370,7 @@ class _DeliveryDashboardScreenState extends State<DeliveryDashboardScreen> {
                                           "Bhaijan Nagar, Springfield",
                                           style: GoogleFonts.poppins(
                                             fontSize: 12,
-                                            color:
-                                                Colors.black54,
+                                            color: Colors.black54,
                                           ),
                                         ),
                                       ),

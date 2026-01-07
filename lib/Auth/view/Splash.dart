@@ -1,8 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:get/get_core/src/get_main.dart';
-import 'package:get/get_navigation/src/extension_navigation.dart';
+import 'package:get/get.dart';
 import 'package:restro_deliveryapp/Auth/view/Login.dart';
+import 'package:restro_deliveryapp/Auth/view/Navbar.dart';
+import 'package:restro_deliveryapp/utils/SharedPref.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -13,7 +14,7 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
-
+  
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
   late Animation<double> _fadeAnimation;
@@ -41,9 +42,17 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller.forward();
 
-    //  Navigate after 3 seconds
-    Timer(const Duration(seconds: 3), () {
-      Get.to(DeliveryLoginScreen());
+    // 🔥 Check login status after 3 sec
+    Timer(const Duration(seconds: 3), () async {
+      String token = await SharedPre.getAccessToken();
+
+      if (token.isNotEmpty) {
+        // Already logged in → Go to dashboard
+        Get.offAll(() => const BottomNavBar());
+      } else {
+        // No Login → Go to Login screen
+        Get.offAll(() => const DeliveryLoginScreen());
+      }
     });
   }
 
@@ -71,43 +80,41 @@ class _SplashScreenState extends State<SplashScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-
-           //  LOGO (Bigger & Premium)
-ScaleTransition(
-  scale: _scaleAnimation,
-  child: FadeTransition(
-    opacity: _fadeAnimation,
-    child: Container(
-      height: 160, //  increased
-      width: 160,  //  increased
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black26,
-            blurRadius: 18,
-            offset: Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12), //  reduced
-        child: ClipOval(
-          child: Image.asset(
-            'assets/images/restro_logo.jpg',
-            fit: BoxFit.cover, //  full fill
-          ),
-        ),
-      ),
-    ),
-  ),
-),
-
+            /// LOGO
+            ScaleTransition(
+              scale: _scaleAnimation,
+              child: FadeTransition(
+                opacity: _fadeAnimation,
+                child: Container(
+                  height: 160,
+                  width: 160,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black26,
+                        blurRadius: 18,
+                        offset: Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: ClipOval(
+                      child: Image.asset(
+                        'assets/images/restro_logo.jpg',
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
 
             const SizedBox(height: 25),
 
-            //  APP NAME
+            /// APP NAME
             FadeTransition(
               opacity: _fadeAnimation,
               child: const Text(
@@ -123,7 +130,7 @@ ScaleTransition(
 
             const SizedBox(height: 8),
 
-            //  TAGLINE
+            /// TAGLINE
             FadeTransition(
               opacity: _fadeAnimation,
               child: const Text(
@@ -139,7 +146,6 @@ ScaleTransition(
 
             const SizedBox(height: 40),
 
-            //  LOADER
             const CircularProgressIndicator(
               color: Colors.white,
               strokeWidth: 2,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:restro_deliveryapp/Auth/controller/Authcontroller.dart';
 import 'package:restro_deliveryapp/Auth/view/Navbar.dart';
 import 'package:restro_deliveryapp/Auth/view/Signup.dart';
 
@@ -17,6 +18,9 @@ class _DeliveryLoginScreenState extends State<DeliveryLoginScreen> {
   final TextEditingController passCtrl = TextEditingController();
 
   bool hidePassword = true;
+
+  // ⭐ GetX Auth Controller
+  final AuthController auth = Get.put(AuthController());
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +39,7 @@ class _DeliveryLoginScreenState extends State<DeliveryLoginScreen> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            //  PREMIUM HEADER WITH LOGO
+            // HEADER
             Container(
               width: double.infinity,
               padding: EdgeInsets.only(
@@ -51,7 +55,6 @@ class _DeliveryLoginScreenState extends State<DeliveryLoginScreen> {
               ),
               child: Column(
                 children: [
-                  //  APP LOGO
                   Container(
                     height: 90,
                     width: 90,
@@ -76,10 +79,7 @@ class _DeliveryLoginScreenState extends State<DeliveryLoginScreen> {
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 16),
-
-                  //  BRAND NAME
                   RichText(
                     text: TextSpan(
                       children: [
@@ -102,10 +102,7 @@ class _DeliveryLoginScreenState extends State<DeliveryLoginScreen> {
                       ],
                     ),
                   ),
-
                   const SizedBox(height: 6),
-
-                  //  TAGLINE
                   Text(
                     "Delivering Grandma’s Love",
                     style: GoogleFonts.poppins(
@@ -120,7 +117,7 @@ class _DeliveryLoginScreenState extends State<DeliveryLoginScreen> {
 
             const SizedBox(height: 38),
 
-            //  LOGIN CARD
+            // LOGIN CARD
             Container(
               margin: EdgeInsets.symmetric(horizontal: width * 0.06),
               padding: const EdgeInsets.fromLTRB(20, 26, 20, 30),
@@ -147,46 +144,27 @@ class _DeliveryLoginScreenState extends State<DeliveryLoginScreen> {
 
                   const SizedBox(height: 24),
 
-                  // ID FIELD
                   _buildTextField(
                     context,
                     controller: idCtrl,
-                    hint: "Enter your ID",
+                    hint: "Enter your Phone Number",
                     icon: Icons.person_outline,
                     isPassword: false,
                   ),
 
                   const SizedBox(height: 16),
 
-                  // PASSWORD FIELD
                   _buildTextField(
                     context,
                     controller: passCtrl,
-                    hint: "Enter your password",
+                    hint: "Enter your Password",
                     icon: Icons.lock_outline,
                     isPassword: true,
                   ),
 
-                  const SizedBox(height: 6),
-
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: () {},
-                      child: Text(
-                        "Forgot Password?",
-                        style: GoogleFonts.poppins(
-                          fontSize: width * 0.032,
-                          fontWeight: FontWeight.w500,
-                          color: const Color(0xFF8B0000),
-                        ),
-                      ),
-                    ),
-                  ),
-
                   const SizedBox(height: 12),
 
-                  // LOGIN BUTTON
+                  // LOGIN BUTTON WITH AUTH CONTROLLER
                   SizedBox(
                     width: double.infinity,
                     height: width * 0.13,
@@ -199,7 +177,10 @@ class _DeliveryLoginScreenState extends State<DeliveryLoginScreen> {
                         ),
                       ),
                       onPressed: () {
-                        Get.offAll(const BottomNavBar());
+                        auth.loginDeliveryPartner(
+                          phone: idCtrl.text.trim(),
+                          password: passCtrl.text.trim(),
+                        );
                       },
                       child: Text(
                         "Login",
@@ -217,7 +198,6 @@ class _DeliveryLoginScreenState extends State<DeliveryLoginScreen> {
 
             const SizedBox(height: 28),
 
-            // SIGN UP
             TextButton(
               onPressed: () {
                 Get.to(const DeliveryRegistrationScreen());
@@ -228,35 +208,8 @@ class _DeliveryLoginScreenState extends State<DeliveryLoginScreen> {
                   fontSize: width * 0.035,
                   fontWeight: FontWeight.w500,
                   color: const Color(0xFF8B0000),
-                  decoration: TextDecoration.underline, 
+                  decoration: TextDecoration.underline,
                 ),
-              ),
-            ),
-
-            const SizedBox(height: 14),
-
-            // TERMS
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: width * 0.12),
-              child: Text.rich(
-                TextSpan(
-                  style: GoogleFonts.poppins(
-                    fontSize: width * 0.03,
-                    color: Colors.black54,
-                  ),
-                  children: const [
-                    TextSpan(text: "By proceeding, you agree to the "),
-                    TextSpan(
-                      text: "Terms & Conditions",
-                      style: TextStyle(
-                        color: Color(0xFF8B0000),
-                        fontWeight: FontWeight.w600, 
-                        decoration: TextDecoration.underline,
-                      ),
-                    ),
-                  ],
-                ),
-                textAlign: TextAlign.center,
               ),
             ),
 
@@ -267,7 +220,7 @@ class _DeliveryLoginScreenState extends State<DeliveryLoginScreen> {
     );
   }
 
-  // 🔹 INPUT FIELD
+  // TEXT FIELD WIDGET
   Widget _buildTextField(
     BuildContext context, {
     required TextEditingController controller,

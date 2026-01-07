@@ -24,7 +24,7 @@ class _DeliveryEarningsScreenState extends State<DeliveryEarningsScreen> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            /// 🔥 HEADER
+            ///  HEADER
             Container(
               width: double.infinity,
               padding: EdgeInsets.only(

@@ -1,8 +1,10 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:restro_deliveryapp/Auth/controller/Authcontroller.dart';
 
 class DeliveryRegistrationScreen extends StatefulWidget {
   const DeliveryRegistrationScreen({super.key});
@@ -14,19 +16,28 @@ class DeliveryRegistrationScreen extends StatefulWidget {
 
 class _DeliveryRegistrationScreenState
     extends State<DeliveryRegistrationScreen> {
-  final partnerIdCtrl = TextEditingController();
+  final AuthController auth = Get.put(AuthController());
+
+  // TEXT CONTROLLERS
   final nameCtrl = TextEditingController();
   final phoneCtrl = TextEditingController();
   final emailCtrl = TextEditingController();
+  final passwordCtrl = TextEditingController();
+  final confirmpassCtrl = TextEditingController();
   final vehicleNumberCtrl = TextEditingController();
-  final accountNumberCtrl = TextEditingController();
-  final ifscCtrl = TextEditingController();
   final aadhaarIdCtrl = TextEditingController();
   final panIdCtrl = TextEditingController();
   final dlIdCtrl = TextEditingController();
 
-  String vehicleType = "Bike";
+  // VEHICLE TYPE
+  String vehicleType = "BIKE";
+
+  // FILES
   File? profileImageFile;
+  File? aadhaarImageFile;
+  File? panImageFile;
+  File? dlImageFile;
+
   final ImagePicker picker = ImagePicker();
 
   Future<void> _pickImage(Function(File) onPicked) async {
@@ -90,8 +101,9 @@ class _DeliveryRegistrationScreenState
       body: SingleChildScrollView(
         padding: const EdgeInsets.only(bottom: 50),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            /// 🔥 HEADER WITH CENTER LOGO
+            // HEADER
             Container(
               width: double.infinity,
               padding: EdgeInsets.only(
@@ -113,17 +125,14 @@ class _DeliveryRegistrationScreenState
                     top: 6,
                     child: InkWell(
                       onTap: () => Navigator.pop(context),
-                      child: const CircleAvatar( 
+                      child: const CircleAvatar(
                         radius: 18,
                         backgroundColor: Colors.white,
-                        child: Icon(Icons.arrow_back,
-                            color: Color(0xFF8B0000)),
+                        child: Icon(Icons.arrow_back, color: Color(0xFF8B0000)),
                       ),
                     ),
                   ),
-
                   Column(
-                    mainAxisSize: MainAxisSize.min,
                     children: [
                       CircleAvatar(
                         radius: 34,
@@ -145,26 +154,26 @@ class _DeliveryRegistrationScreenState
                           color: Colors.white,
                         ),
                       ),
-                  
                     ],
                   ),
                 ],
               ),
             ),
 
+            // PROFILE IMAGE
             const SizedBox(height: 28),
-
-            /// PROFILE IMAGE
             Center(
               child: Stack(
                 children: [
                   CircleAvatar(
                     radius: 52,
                     backgroundColor: Colors.grey.shade200,
-                    backgroundImage:
-                        profileImageFile != null ? FileImage(profileImageFile!) : null,
+                    backgroundImage: profileImageFile != null
+                        ? FileImage(profileImageFile!)
+                        : null,
                     child: profileImageFile == null
-                        ? const Icon(Icons.person, size: 46, color: Colors.black45)
+                        ? const Icon(Icons.person,
+                            size: 46, color: Colors.black45)
                         : null,
                   ),
                   Positioned(
@@ -179,7 +188,8 @@ class _DeliveryRegistrationScreenState
                       child: const CircleAvatar(
                         radius: 18,
                         backgroundColor: Color(0xFF8B0000),
-                        child: Icon(Icons.camera_alt, size: 18, color: Colors.white),
+                        child:
+                            Icon(Icons.camera_alt, size: 18, color: Colors.white),
                       ),
                     ),
                   ),
@@ -189,11 +199,13 @@ class _DeliveryRegistrationScreenState
 
             const SizedBox(height: 36),
 
+            // FORM FIELDS
             _section("Partner Details"),
-            _field(partnerIdCtrl, Icons.badge_outlined, "Partner ID"),
             _field(nameCtrl, Icons.person_outline, "Full Name"),
             _field(phoneCtrl, Icons.phone_outlined, "Mobile Number"),
             _field(emailCtrl, Icons.email_outlined, "Email Address"),
+            _field(passwordCtrl, Icons.password_outlined, "Password"),
+            _field(confirmpassCtrl, Icons.password_rounded, "Confirm Password"),
 
             const SizedBox(height: 28),
 
@@ -203,32 +215,47 @@ class _DeliveryRegistrationScreenState
               child: DropdownButtonFormField<String>(
                 value: vehicleType,
                 decoration: _decoration(Icons.directions_bike, "Vehicle Type"),
-                items: ["Bike", "Bicycle"]
-                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                items: ["BIKE", "CAR"]
+                    .map((e) =>
+                        DropdownMenuItem(value: e, child: Text(e)))
                     .toList(),
                 onChanged: (v) => setState(() => vehicleType = v!),
               ),
             ),
-            _field(vehicleNumberCtrl, Icons.confirmation_number_outlined, "Vehicle Number"),
+            _field(vehicleNumberCtrl, Icons.confirmation_number_outlined,
+                "Vehicle Number"),
 
             const SizedBox(height: 28),
 
             _section("Upload Documents (KYC)"),
-            _upload("Aadhaar Card", () => _pickImage((_) {})),
+
+            // ⭐ AADHAAR
+            _upload("Aadhaar Card", aadhaarImageFile, () {
+              _pickImage((file) {
+                setState(() => aadhaarImageFile = file);
+              });
+            }),
             _field(aadhaarIdCtrl, Icons.credit_card, "Aadhaar Number"),
-            _upload("PAN Card", () => _pickImage((_) {})),
+
+            // ⭐ PAN
+            _upload("PAN Card", panImageFile, () {
+              _pickImage((file) {
+                setState(() => panImageFile = file);
+              });
+            }),
             _field(panIdCtrl, Icons.perm_identity, "PAN Number"),
-            _upload("Driving License", () => _pickImage((_) {})),
+
+            // ⭐ DRIVING LICENSE
+            _upload("Driving License", dlImageFile, () {
+              _pickImage((file) {
+                setState(() => dlImageFile = file);
+              });
+            }),
             _field(dlIdCtrl, Icons.drive_eta_outlined, "License Number"),
-
-            const SizedBox(height: 28),
-
-            _section("Bank Information"),
-            _field(accountNumberCtrl, Icons.account_balance_wallet_outlined, "Account Number"),
-            _field(ifscCtrl, Icons.account_balance_outlined, "IFSC Code"),
 
             const SizedBox(height: 36),
 
+            // REGISTER BUTTON
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 22),
               child: SizedBox(
@@ -237,13 +264,32 @@ class _DeliveryRegistrationScreenState
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF8B0000),
-                    shape: RoundedRectangleBorder( 
-                      borderRadius: BorderRadius.circular(14),
-                    ),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
                   ),
-                  onPressed: () {},
+                  onPressed: () {
+  auth.registerDeliveryPartner(
+  name: nameCtrl.text,
+  phone: phoneCtrl.text,
+  email: emailCtrl.text,
+  password: passwordCtrl.text,
+  confirmPassword: confirmpassCtrl.text,
+  vehicleType: vehicleType,
+  // vehicleNumber: vehicleNumberCtrl.text,
+  aadhaarNumber: aadhaarIdCtrl.text,
+  panNumber: panIdCtrl.text,
+  dlNumber: dlIdCtrl.text,
+  profileImage: profileImageFile,
+  aadhaarImage: aadhaarImageFile,
+  panImage: panImageFile,
+  dlImage: dlImageFile,
+);
+
+
+
+                  },
                   child: Text(
-                    "Registered ",
+                    "Register",
                     style: GoogleFonts.poppins(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
@@ -261,13 +307,13 @@ class _DeliveryRegistrationScreenState
     );
   }
 
-  /// COMPONENTS
+  // ------------------- COMPONENTS -------------------
+
   Widget _section(String text) => Padding(
         padding: const EdgeInsets.fromLTRB(22, 8, 22, 6),
-        child: Text(
-          text,
-          style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w600),
-        ),
+        child: Text(text,
+            style: GoogleFonts.poppins(
+                fontSize: 15, fontWeight: FontWeight.w600)),
       );
 
   Widget _field(TextEditingController c, IconData i, String h) => Padding(
@@ -275,12 +321,13 @@ class _DeliveryRegistrationScreenState
         child: TextField(controller: c, decoration: _decoration(i, h)),
       );
 
-  Widget _upload(String title, VoidCallback onTap) => Padding(
+  Widget _upload(String title, File? file, VoidCallback onTap) => Padding(
         padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 6),
         child: InkWell(
           onTap: onTap,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: Colors.grey.shade200),
@@ -288,14 +335,16 @@ class _DeliveryRegistrationScreenState
             ),
             child: Row(
               children: [
-                const Icon(Icons.upload_file_outlined, size: 22),
+                file == null
+                    ? const Icon(Icons.upload_file_outlined, size: 22)
+                    : Image.file(file, width: 45, height: 45, fit: BoxFit.cover),
+
                 const SizedBox(width: 12),
+
                 Expanded(
-                  child: Text(
-                    title,
-                    style: GoogleFonts.poppins(fontSize: 13),
-                  ),
+                  child: Text(title, style: GoogleFonts.poppins(fontSize: 13)),
                 ),
+
                 const Icon(Icons.arrow_forward_ios, size: 14),
               ],
             ),
@@ -309,12 +358,12 @@ class _DeliveryRegistrationScreenState
         hintText: hint,
         prefixIcon: Icon(icon, size: 20),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF8B0000), width: 1.2),
+          borderSide:
+              const BorderSide(color: Color(0xFF8B0000), width: 1.2),
         ),
       );
 }
