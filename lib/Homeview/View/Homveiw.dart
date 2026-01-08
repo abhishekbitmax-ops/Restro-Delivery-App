@@ -176,20 +176,29 @@ class _DeliveryDashboardScreenState extends State<DeliveryDashboardScreen> {
                       const Spacer(),
 
                       /// 🔥 ONLINE/OFFLINE SWITCH (API INTEGRATED)
-                      GestureDetector(
+                    GestureDetector(
   onTap: () async {
-    bool newStatus = !isOnline;
+    var result = await auth.toggleOnlineStatus();
 
-    // Store previous state (in case API fails)
-    bool previous = isOnline;
+    if (result != null && result["success"] == true) {
+      setState(() {
+        isOnline = result["data"]["isOnline"]; // backend controls status
+      });
 
-    // Call the API
-    await auth.toggleOnlineStatus(newStatus);
-
-    // Update UI only after API call completes
-    setState(() {
-      isOnline = newStatus;
-    });
+      Get.snackbar(
+        "Status Updated",
+        result["message"],
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
+    } else {
+      Get.snackbar(
+        "Error",
+        "Unable to change status",
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
   },
   child: AnimatedContainer(
     duration: const Duration(milliseconds: 250),
@@ -198,32 +207,24 @@ class _DeliveryDashboardScreenState extends State<DeliveryDashboardScreen> {
     padding: const EdgeInsets.all(3),
     decoration: BoxDecoration(
       borderRadius: BorderRadius.circular(20),
-      color: isOnline
-          ? const Color(0xFF1E6F4F)
-          : const Color(0xFF3A3A3A),
+      color: isOnline ? Color(0xFF1E6F4F) : Color(0xFF3A3A3A),
     ),
     child: AnimatedAlign(
       duration: const Duration(milliseconds: 250),
-      alignment: isOnline
-          ? Alignment.centerRight
-          : Alignment.centerLeft,
+      alignment:
+          isOnline ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         width: 20,
         height: 20,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              blurRadius: 4,
-              color: Colors.black.withOpacity(0.25),
-            ),
-          ],
         ),
       ),
     ),
   ),
 ),
+
 
                     ],
                   ),

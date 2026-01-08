@@ -19,7 +19,28 @@ class ProfileData {
   String? name;
   String? phone;
   String? email;
+
+  // Newly added fields
+  String? dob;
+  String? gender;
+  String? address;
+  String? profileImage;
+
+  // Vehicle
   String? vehicleType;
+  String? vehicleNumber;
+
+  // KYC Numbers
+  String? aadhaarNumber;
+  String? panNumber;
+  String? drivingLicenseNumber;
+
+  List<BankDetail>? bankDetails;
+
+
+  
+
+  // Old fields continued
   Restaurant? restaurant;
   bool? isActive;
   bool? isOnline;
@@ -34,7 +55,15 @@ class ProfileData {
     this.name,
     this.phone,
     this.email,
+    this.dob,
+    this.gender,
+    this.address,
+    this.profileImage,
     this.vehicleType,
+    this.vehicleNumber,
+    this.aadhaarNumber,
+    this.panNumber,
+    this.drivingLicenseNumber,
     this.restaurant,
     this.isActive,
     this.isOnline,
@@ -43,29 +72,63 @@ class ProfileData {
     this.kyc,
     this.totalOrders,
     this.createdAt,
+   this.bankDetails,  // ✔ FIXED
+
   });
+
+
+  
 
   factory ProfileData.fromJson(Map<String, dynamic> json) {
     return ProfileData(
-      id: json["id"],
+      id: json["_id"] ?? json["id"],
       name: json["name"],
-      phone: json["phone"],
+      phone: json["mobile"] ?? json["phone"],
       email: json["email"],
+
+      // NEW FIELDS
+      dob: json["dob"],
+      gender: json["gender"],
+      address: json["address"],
+      profileImage: json["profileImage"],
+
       vehicleType: json["vehicleType"],
+      vehicleNumber: json["vehicleNumber"],
+
+      aadhaarNumber: json["aadhaarNumber"] ??
+          json["kyc"]?["aadhaar"]?["number"],
+      panNumber: json["panNumber"] ?? json["kyc"]?["pan"]?["number"],
+      drivingLicenseNumber: json["drivingLicenseNumber"] ??
+          json["kyc"]?["drivingLicense"]?["number"],
+
       restaurant:
           json["restaurant"] != null ? Restaurant.fromJson(json["restaurant"]) : null,
+
       isActive: json["isActive"],
       isOnline: json["isOnline"],
       isAvailable: json["isAvailable"],
+
       currentLocation: json["currentLocation"] != null
           ? CurrentLocation.fromJson(json["currentLocation"])
           : null,
+
       kyc: json["kyc"] != null ? Kyc.fromJson(json["kyc"]) : null,
+
+    
+
       totalOrders: json["totalOrders"],
       createdAt: json["createdAt"],
+
+      bankDetails: json["bankDetails"] != null
+    ? List<BankDetail>.from(
+        json["bankDetails"].map((x) => BankDetail.fromJson(x)))
+    : [],
+
     );
   }
 }
+
+
 
 class Restaurant {
   String? id;
@@ -77,7 +140,7 @@ class Restaurant {
 
   factory Restaurant.fromJson(Map<String, dynamic> json) {
     return Restaurant(
-      id: json["id"],
+      id: json["_id"] ?? json["id"],
       name: json["name"],
       address: json["address"] ?? {},
       location: json["location"] ?? {},
@@ -127,16 +190,47 @@ class Kyc {
 
 class DocumentData {
   String? number;
-  String? documentUrl;
-  bool? verified;
+ String? documentUrl;   // Aadhaar Front / PAN / DL
+  String? backUrl;       // Aadhaar Back (NEW FIELD)  bool? verified;
+    bool? verified;
 
-  DocumentData({this.number, this.documentUrl, this.verified});
 
-  factory DocumentData.fromJson(Map<String, dynamic> json) {
+  DocumentData({this.number, this.documentUrl, this.backUrl, this.verified});
+
+ factory DocumentData.fromJson(Map<String, dynamic> json) {
     return DocumentData(
       number: json["number"],
       documentUrl: json["documentUrl"],
+      backUrl: json["backUrl"],       // <-- ADD THIS
       verified: json["verified"],
     );
   }
 }
+
+
+class BankDetail {
+  String? holderName;
+  String? accountNumber;
+  String? ifscCode;
+  String? mobile;
+  String? qrImage;
+
+  BankDetail({
+    this.holderName,
+    this.accountNumber,
+    this.ifscCode,
+    this.mobile,
+    this.qrImage,
+  });
+
+  factory BankDetail.fromJson(Map<String, dynamic> json) {
+    return BankDetail(
+      holderName: json["holderName"],
+      accountNumber: json["accountNumber"],
+      ifscCode: json["ifscCode"],
+      mobile: json["mobile"],
+      qrImage: json["qrImage"],
+    );
+  }
+}
+

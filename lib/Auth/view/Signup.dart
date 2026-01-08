@@ -23,20 +23,31 @@ class _DeliveryRegistrationScreenState
   final phoneCtrl = TextEditingController();
   final emailCtrl = TextEditingController();
   final passwordCtrl = TextEditingController();
-  final confirmpassCtrl = TextEditingController();
-  final vehicleNumberCtrl = TextEditingController();
+
   final aadhaarIdCtrl = TextEditingController();
   final panIdCtrl = TextEditingController();
   final dlIdCtrl = TextEditingController();
 
-  // VEHICLE TYPE
+  final vehicleNumberCtrl = TextEditingController();
+
+  final addressLine1Ctrl = TextEditingController();
+  final addressLine2Ctrl = TextEditingController();
+  final cityCtrl = TextEditingController();
+  final stateCtrl = TextEditingController();
+  final pincodeCtrl = TextEditingController();
+
+  // DOB & GENDER
+String gender = "MALE";
+  DateTime? dob;
+
   String vehicleType = "BIKE";
 
   // FILES
   File? profileImageFile;
-  File? aadhaarImageFile;
-  File? panImageFile;
-  File? dlImageFile;
+  File? aadhaarFrontFile;
+  File? aadhaarBackFile;
+  File? panFile;
+  File? dlFile;
 
   final ImagePicker picker = ImagePicker();
 
@@ -74,7 +85,6 @@ class _DeliveryRegistrationScreenState
                 title: const Text("Gallery"),
                 onTap: () => Navigator.pop(ctx, ImageSource.gallery),
               ),
-              const SizedBox(height: 10),
             ],
           ),
         ),
@@ -82,10 +92,9 @@ class _DeliveryRegistrationScreenState
     );
 
     if (source != null) {
-      final picked = await picker.pickImage(source: source, imageQuality: 70);
-      if (picked != null) {
-        onPicked(File(picked.path));
-      }
+      final picked =
+          await picker.pickImage(source: source, imageQuality: 70);
+      if (picked != null) onPicked(File(picked.path));
     }
   }
 
@@ -103,7 +112,10 @@ class _DeliveryRegistrationScreenState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+
+            // --------------------------------------------------
             // HEADER
+            // --------------------------------------------------
             Container(
               width: double.infinity,
               padding: EdgeInsets.only(
@@ -160,20 +172,23 @@ class _DeliveryRegistrationScreenState
               ),
             ),
 
-            // PROFILE IMAGE
             const SizedBox(height: 28),
+
+            // --------------------------------------------------
+            // PROFILE IMAGE
+            // --------------------------------------------------
             Center(
               child: Stack(
                 children: [
                   CircleAvatar(
                     radius: 52,
                     backgroundColor: Colors.grey.shade200,
-                    backgroundImage: profileImageFile != null
-                        ? FileImage(profileImageFile!)
-                        : null,
+                    backgroundImage:
+                        profileImageFile != null
+                            ? FileImage(profileImageFile!)
+                            : null,
                     child: profileImageFile == null
-                        ? const Icon(Icons.person,
-                            size: 46, color: Colors.black45)
+                        ? const Icon(Icons.person, size: 46, color: Colors.black45)
                         : null,
                   ),
                   Positioned(
@@ -188,8 +203,7 @@ class _DeliveryRegistrationScreenState
                       child: const CircleAvatar(
                         radius: 18,
                         backgroundColor: Color(0xFF8B0000),
-                        child:
-                            Icon(Icons.camera_alt, size: 18, color: Colors.white),
+                        child: Icon(Icons.camera_alt, size: 18, color: Colors.white),
                       ),
                     ),
                   ),
@@ -199,63 +213,157 @@ class _DeliveryRegistrationScreenState
 
             const SizedBox(height: 36),
 
-            // FORM FIELDS
-            _section("Partner Details"),
+            // --------------------------------------------------
+            // BASIC DETAILS
+            // --------------------------------------------------
+            _section("Basic Details"),
             _field(nameCtrl, Icons.person_outline, "Full Name"),
             _field(phoneCtrl, Icons.phone_outlined, "Mobile Number"),
             _field(emailCtrl, Icons.email_outlined, "Email Address"),
-            _field(passwordCtrl, Icons.password_outlined, "Password"),
-            _field(confirmpassCtrl, Icons.password_rounded, "Confirm Password"),
+            _field(passwordCtrl, Icons.lock_outline, "Password"),
+
+            // DOB
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 8),
+              child: InkWell(
+                onTap: () async {
+                  dob = await showDatePicker(
+                    context: context,
+                    firstDate: DateTime(1970),
+                    lastDate: DateTime.now(),
+                    initialDate: DateTime(2000),
+                  );
+                  setState(() {});
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: Row(
+  children: [
+    const Icon(Icons.calendar_today, size: 20),
+    const SizedBox(width: 12),
+    Text(
+      dob == null
+          ? "Select Date of Birth"
+          : "${dob!.year}-${dob!.month.toString().padLeft(2, '0')}-${dob!.day.toString().padLeft(2, '0')}",
+      style: GoogleFonts.poppins(fontSize: 14),
+    ),
+  ],
+),
+
+                ),
+              ),
+            ),
+
+            // Gender Dropdown
+       Padding(
+  padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 8),
+  child: DropdownButtonFormField<String>(
+    value: gender,
+    decoration: _decoration(Icons.person, "Gender"),
+    items: ["MALE", "FEMALE", "OTHER"]
+        .map((g) => DropdownMenuItem(
+              value: g,
+              child: Text(g),
+            ))
+        .toList(),
+    onChanged: (value) {
+      setState(() => gender = value!);
+    },
+  ),
+),
+
+
+            // --------------------------------------------------
+            // ADDRESS
+            // --------------------------------------------------
+            _section("Address Details"),
+
+            _field(addressLine1Ctrl, Icons.home, "Address Line 1"),
+            _field(addressLine2Ctrl, Icons.home_max, "Address Line 2"),
+            _field(cityCtrl, Icons.location_city, "City"),
+            _field(stateCtrl, Icons.map, "State"),
+            _field(pincodeCtrl, Icons.pin, "Pincode"),
 
             const SizedBox(height: 28),
 
+            // --------------------------------------------------
+            // VEHICLE
+            // --------------------------------------------------
             _section("Vehicle Information"),
+
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 8),
               child: DropdownButtonFormField<String>(
                 value: vehicleType,
                 decoration: _decoration(Icons.directions_bike, "Vehicle Type"),
-                items: ["BIKE", "CAR"]
-                    .map((e) =>
-                        DropdownMenuItem(value: e, child: Text(e)))
+                items: ["BIKE", "CAR", "CYCLE"]
+                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
                     .toList(),
                 onChanged: (v) => setState(() => vehicleType = v!),
               ),
             ),
+
             _field(vehicleNumberCtrl, Icons.confirmation_number_outlined,
                 "Vehicle Number"),
 
             const SizedBox(height: 28),
 
+            // --------------------------------------------------
+            // DOCUMENTS
+            // --------------------------------------------------
             _section("Upload Documents (KYC)"),
 
-            // ⭐ AADHAAR
-            _upload("Aadhaar Card", aadhaarImageFile, () {
-              _pickImage((file) {
-                setState(() => aadhaarImageFile = file);
-              });
-            }),
             _field(aadhaarIdCtrl, Icons.credit_card, "Aadhaar Number"),
 
-            // ⭐ PAN
-            _upload("PAN Card", panImageFile, () {
-              _pickImage((file) {
-                setState(() => panImageFile = file);
-              });
-            }),
+            _uploadKyc(
+              title: "Aadhaar Front Image",
+              file: aadhaarFrontFile,
+              onTap: () {
+                _pickImage(
+                    (file) => setState(() => aadhaarFrontFile = file));
+              },
+            ),
+
+            _uploadKyc(
+              title: "Aadhaar Back Image",
+              file: aadhaarBackFile,
+              onTap: () {
+                _pickImage(
+                    (file) => setState(() => aadhaarBackFile = file));
+              },
+            ),
+
             _field(panIdCtrl, Icons.perm_identity, "PAN Number"),
 
-            // ⭐ DRIVING LICENSE
-            _upload("Driving License", dlImageFile, () {
-              _pickImage((file) {
-                setState(() => dlImageFile = file);
-              });
-            }),
-            _field(dlIdCtrl, Icons.drive_eta_outlined, "License Number"),
+            _uploadKyc(
+              title: "PAN Card Image",
+              file: panFile,
+              onTap: () {
+                _pickImage((file) => setState(() => panFile = file));
+              },
+            ),
+
+            _field(dlIdCtrl, Icons.drive_eta_outlined,
+                "Driving License Number"),
+
+            _uploadKyc(
+              title: "Driving License Image",
+              file: dlFile,
+              onTap: () {
+                _pickImage((file) => setState(() => dlFile = file));
+              },
+            ),
 
             const SizedBox(height: 36),
 
+            // --------------------------------------------------
             // REGISTER BUTTON
+            // --------------------------------------------------
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 22),
               child: SizedBox(
@@ -265,28 +373,39 @@ class _DeliveryRegistrationScreenState
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF8B0000),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14)),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                   ),
                   onPressed: () {
-  auth.registerDeliveryPartner(
-  name: nameCtrl.text,
-  phone: phoneCtrl.text,
-  email: emailCtrl.text,
-  password: passwordCtrl.text,
-  confirmPassword: confirmpassCtrl.text,
-  vehicleType: vehicleType,
-  // vehicleNumber: vehicleNumberCtrl.text,
-  aadhaarNumber: aadhaarIdCtrl.text,
-  panNumber: panIdCtrl.text,
-  dlNumber: dlIdCtrl.text,
-  profileImage: profileImageFile,
-  aadhaarImage: aadhaarImageFile,
-  panImage: panImageFile,
-  dlImage: dlImageFile,
-);
+                    auth.registerDeliveryPartner(
+                      name: nameCtrl.text,
+                      phone: phoneCtrl.text,
+                      email: emailCtrl.text,
+                      password: passwordCtrl.text,
 
+                      dob: dob == null ? "" : dob!.toIso8601String(),
+                      gender: gender,
 
+                     addressLine1: addressLine1Ctrl.text,
 
+                      addressLine2: addressLine2Ctrl.text,
+                      city: cityCtrl.text,
+                      state: stateCtrl.text,
+                      pincode: pincodeCtrl.text,
+
+                      vehicleType: vehicleType,
+                      vehicleNumber: vehicleNumberCtrl.text,
+
+                      aadhaarNumber: aadhaarIdCtrl.text,
+                      panNumber: panIdCtrl.text,
+                      dlNumber: dlIdCtrl.text,
+
+                      profileImage: profileImageFile,
+                      aadhaarFront: aadhaarFrontFile,
+                      aadhaarBack: aadhaarBackFile,
+                      panImage: panFile,
+                      dlImage: dlFile,
+                    );
                   },
                   child: Text(
                     "Register",
@@ -307,50 +426,83 @@ class _DeliveryRegistrationScreenState
     );
   }
 
-  // ------------------- COMPONENTS -------------------
-
+  // --------------------------------------------------
+  // COMPONENTS
+  // --------------------------------------------------
   Widget _section(String text) => Padding(
         padding: const EdgeInsets.fromLTRB(22, 8, 22, 6),
-        child: Text(text,
-            style: GoogleFonts.poppins(
-                fontSize: 15, fontWeight: FontWeight.w600)),
+        child: Text(
+          text,
+          style:
+              GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w600),
+        ),
       );
 
   Widget _field(TextEditingController c, IconData i, String h) => Padding(
         padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 8),
-        child: TextField(controller: c, decoration: _decoration(i, h)),
-      );
-
-  Widget _upload(String title, File? file, VoidCallback onTap) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 6),
-        child: InkWell(
-          onTap: onTap,
-          child: Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey.shade200),
-              color: Colors.grey.shade50,
-            ),
-            child: Row(
-              children: [
-                file == null
-                    ? const Icon(Icons.upload_file_outlined, size: 22)
-                    : Image.file(file, width: 45, height: 45, fit: BoxFit.cover),
-
-                const SizedBox(width: 12),
-
-                Expanded(
-                  child: Text(title, style: GoogleFonts.poppins(fontSize: 13)),
-                ),
-
-                const Icon(Icons.arrow_forward_ios, size: 14),
-              ],
-            ),
-          ),
+        child: TextField(
+          controller: c,
+          decoration: _decoration(i, h),
         ),
       );
+
+  Widget _uploadKyc({
+    required String title,
+    required File? file,
+    required VoidCallback onTap,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 6),
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade300),
+            color: Colors.grey.shade50,
+          ),
+          child: Row(
+            children: [
+              file == null
+                  ? Container(
+                      width: 45,
+                      height: 45,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      child: const Icon(Icons.upload_file, size: 22),
+                    )
+                  : ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: Image.file(
+                        file,
+                        width: 50,
+                        height: 50,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  title,
+                  style: GoogleFonts.poppins(
+                      fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+              ),
+              Icon(
+                file == null ? Icons.arrow_forward_ios : Icons.check_circle,
+                size: 18,
+                color: file == null ? Colors.grey : Colors.green,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   InputDecoration _decoration(IconData icon, String hint) => InputDecoration(
         filled: true,
@@ -362,8 +514,7 @@ class _DeliveryRegistrationScreenState
             borderSide: BorderSide.none),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide:
-              const BorderSide(color: Color(0xFF8B0000), width: 1.2),
+          borderSide: const BorderSide(color: Color(0xFF8B0000), width: 1.2),
         ),
       );
 }

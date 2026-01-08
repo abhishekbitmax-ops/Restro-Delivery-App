@@ -10,7 +10,7 @@ class ApiEndpoint {
   static const String register = "/Self-register";
   static const String login = "/login";
   static const String toggleOnline = "/online-offline";
-    static const String getprofile = "/profile";
+    // static const String getprofile = "/profile";
         static const String changePassword = "/changepassword";
 
 
