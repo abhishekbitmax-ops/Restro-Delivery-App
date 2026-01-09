@@ -1,3 +1,262 @@
+// class DeliveryPartnerProfile {
+//   bool? success;
+//   String? message;
+//   ProfileData? data;
+
+//   DeliveryPartnerProfile({this.success, this.message, this.data});
+
+//   factory DeliveryPartnerProfile.fromJson(Map<String, dynamic> json) {
+//     return DeliveryPartnerProfile(
+//       success: json["success"],
+//       message: json["message"],
+//       data: json["data"] != null ? ProfileData.fromJson(json["data"]) : null,
+//     );
+//   }
+// }
+
+// class ProfileData {
+//   String? id;
+//   String? name;
+//   String? phone;
+//   String? email;
+
+//   // Basic Profile
+//   String? dob;
+//   String? gender;
+//   Address? address;
+//   String? profileImage;
+
+//   // Vehicle
+//   String? vehicleType;
+//   String? vehicleNumber;
+
+//   // KYC Numbers
+//   String? aadhaarNumber;
+//   String? panNumber;
+//   String? drivingLicenseNumber;
+
+//   List<BankDetail>? bankDetails;
+
+//   // Old fields
+//   Restaurant? restaurant;
+//   bool? isActive;
+//   bool? isOnline;
+//   bool? isAvailable;
+//   CurrentLocation? currentLocation;
+
+//   Kyc? kyc;
+//   int? totalOrders;
+//   String? createdAt;
+
+//   ProfileData({
+//     this.id,
+//     this.name,
+//     this.phone,
+//     this.email,
+//     this.dob,
+//     this.gender,
+//     this.address,
+//     this.profileImage,
+//     this.vehicleType,
+//     this.vehicleNumber,
+//     this.aadhaarNumber,
+//     this.panNumber,
+//     this.drivingLicenseNumber,
+//     this.bankDetails,
+//     this.restaurant,
+//     this.isActive,
+//     this.isOnline,
+//     this.isAvailable,
+//     this.currentLocation,
+//     this.kyc,
+//     this.totalOrders,
+//     this.createdAt,
+//   });
+
+//   factory ProfileData.fromJson(Map<String, dynamic> json) {
+//     return ProfileData(
+//       id: json["_id"],
+//       name: json["name"],
+//       phone: json["phone"] ?? json["mobile"],
+//       email: json["email"],
+
+//       dob: json["dob"],
+//       gender: json["gender"],
+//       profileImage: json["profileImage"],
+
+//       // Address is an object
+//       address: json["address"] != null ? Address.fromJson(json["address"]) : null,
+
+//       vehicleType: json["vehicleType"],
+//       vehicleNumber: json["vehicleNumber"],
+
+//       // API puts KYC numbers inside: kyc → aadhaarNumber, panNumber...
+//       aadhaarNumber: json["kyc"]?["aadhaarNumber"],
+//       panNumber: json["kyc"]?["panNumber"],
+//       drivingLicenseNumber: json["kyc"]?["drivingLicenseNumber"],
+
+//       // KYC Full Object (documents)
+//       kyc: json["kyc"] != null ? Kyc.fromJson(json["kyc"]) : null,
+
+//       restaurant:
+//           json["restaurant"] != null ? Restaurant.fromJson(json["restaurant"]) : null,
+
+//       isActive: json["isActive"],
+//       isOnline: json["isOnline"],
+//       isAvailable: json["isAvailable"],
+
+//       currentLocation: json["currentLocation"] != null
+//           ? CurrentLocation.fromJson(json["currentLocation"])
+//           : null,
+
+//       totalOrders: json["totalOrders"],
+//       createdAt: json["createdAt"],
+
+//       bankDetails: json["bankDetails"] != null
+//           ? List<BankDetail>.from(
+//               json["bankDetails"].map((x) => BankDetail.fromJson(x)))
+//           : [],
+//     );
+//   }
+// }
+
+// // ---------------- ADDRESS MODEL ----------------
+// class Address {
+//   String? line1;
+//   String? line2;
+//   String? city;
+//   String? state;
+//   String? pincode;
+
+//   Address({this.line1, this.line2, this.city, this.state, this.pincode});
+
+//   factory Address.fromJson(Map<String, dynamic> json) {
+//     return Address(
+//       line1: json["line1"],
+//       line2: json["line2"],
+//       city: json["city"],
+//       state: json["state"],
+//       pincode: json["pincode"],
+//     );
+//   }
+// }
+
+// // ---------------- KYC MODEL ----------------
+// class Kyc {
+//   String? aadhaarNumber;
+//   String? panNumber;
+//   String? drivingLicenseNumber;
+
+//   KycDocuments? documents;
+//   String? status;
+
+//   Kyc({
+//     this.aadhaarNumber,
+//     this.panNumber,
+//     this.drivingLicenseNumber,
+//     this.documents,
+//     this.status,
+//   });
+
+//   factory Kyc.fromJson(Map<String, dynamic> json) {
+//     return Kyc(
+//       aadhaarNumber: json["aadhaarNumber"],
+//       panNumber: json["panNumber"],
+//       drivingLicenseNumber: json["drivingLicenseNumber"],
+//       status: json["status"],
+//       documents: json["documents"] != null
+//           ? KycDocuments.fromJson(json["documents"])
+//           : null,
+//     );
+//   }
+// }
+
+// class KycDocuments {
+//   String? aadhaarFront;
+//   String? aadhaarBack;
+//   String? panCard;
+//   String? drivingLicense;
+
+//   KycDocuments({
+//     this.aadhaarFront,
+//     this.aadhaarBack,
+//     this.panCard,
+//     this.drivingLicense,
+//   });
+
+//   factory KycDocuments.fromJson(Map<String, dynamic> json) {
+//     return KycDocuments(
+//       aadhaarFront: json["aadhaarFront"],
+//       aadhaarBack: json["aadhaarBack"],
+//       panCard: json["panCard"],
+//       drivingLicense: json["drivingLicense"],
+//     );
+//   }
+// }
+
+// // ---------------- RESTAURANT MODEL ----------------
+// class Restaurant {
+//   String? id;
+//   String? name;
+
+//   Restaurant({this.id, this.name});
+
+//   factory Restaurant.fromJson(Map<String, dynamic> json) {
+//     return Restaurant(
+//       id: json["id"] ?? json["_id"],
+//       name: json["name"],
+//     );
+//   }
+// }
+
+// // ---------------- CURRENT LOCATION ----------------
+// class CurrentLocation {
+//   String? type;
+//   List<double>? coordinates;
+//   String? updatedAt;
+
+//   CurrentLocation({this.type, this.coordinates, this.updatedAt});
+
+//   factory CurrentLocation.fromJson(Map<String, dynamic> json) {
+//     return CurrentLocation(
+//       type: json["type"],
+//       coordinates: json["coordinates"] != null
+//           ? List<double>.from(json["coordinates"].map((e) => e.toDouble()))
+//           : [],
+//       updatedAt: json["updatedAt"],
+//     );
+//   }
+// }
+
+// // ---------------- BANK DETAILS ----------------
+// class BankDetail {
+//   String? holderName;
+//   String? accountNumber;
+//   String? ifscCode;
+//   String? mobile;
+//   String? qrImage;
+
+//   BankDetail({
+//     this.holderName,
+//     this.accountNumber,
+//     this.ifscCode,
+//     this.mobile,
+//     this.qrImage,
+//   });
+
+//   factory BankDetail.fromJson(Map<String, dynamic> json) {
+//     return BankDetail(
+//       holderName: json["holderName"],
+//       accountNumber: json["accountNumber"],
+//       ifscCode: json["ifscCode"],
+//       mobile: json["mobile"],
+//       qrImage: json["qrImage"],
+//     );
+//   }
+// }
+
+
+
 class DeliveryPartnerProfile {
   bool? success;
   String? message;
@@ -15,221 +274,168 @@ class DeliveryPartnerProfile {
 }
 
 class ProfileData {
-  String? id;
   String? name;
   String? phone;
   String? email;
-
-  // Newly added fields
-  String? dob;
-  String? gender;
-  String? address;
   String? profileImage;
 
-  // Vehicle
+  String? dob;
+  String? gender;
+
   String? vehicleType;
   String? vehicleNumber;
 
-  // KYC Numbers
-  String? aadhaarNumber;
-  String? panNumber;
-  String? drivingLicenseNumber;
+  Address? address;
+  Kyc? kyc;
 
-  List<BankDetail>? bankDetails;
-
-
-  
-
-  // Old fields continued
-  Restaurant? restaurant;
   bool? isActive;
   bool? isOnline;
   bool? isAvailable;
-  CurrentLocation? currentLocation;
-  Kyc? kyc;
-  int? totalOrders;
+
   String? createdAt;
+  String? lastOnlineAt;
+
+  Restaurant? restaurant;
 
   ProfileData({
-    this.id,
     this.name,
     this.phone,
     this.email,
+    this.profileImage,
     this.dob,
     this.gender,
-    this.address,
-    this.profileImage,
     this.vehicleType,
     this.vehicleNumber,
-    this.aadhaarNumber,
-    this.panNumber,
-    this.drivingLicenseNumber,
-    this.restaurant,
+    this.address,
+    this.kyc,
     this.isActive,
     this.isOnline,
     this.isAvailable,
-    this.currentLocation,
-    this.kyc,
-    this.totalOrders,
     this.createdAt,
-   this.bankDetails,  // ✔ FIXED
-
+    this.lastOnlineAt,
+    this.restaurant,
   });
-
-
-  
 
   factory ProfileData.fromJson(Map<String, dynamic> json) {
     return ProfileData(
-      id: json["_id"] ?? json["id"],
       name: json["name"],
-      phone: json["mobile"] ?? json["phone"],
+      phone: json["phone"],
       email: json["email"],
+      profileImage: json["profileImage"],
 
-      // NEW FIELDS
       dob: json["dob"],
       gender: json["gender"],
-      address: json["address"],
-      profileImage: json["profileImage"],
 
       vehicleType: json["vehicleType"],
       vehicleNumber: json["vehicleNumber"],
 
-      aadhaarNumber: json["aadhaarNumber"] ??
-          json["kyc"]?["aadhaar"]?["number"],
-      panNumber: json["panNumber"] ?? json["kyc"]?["pan"]?["number"],
-      drivingLicenseNumber: json["drivingLicenseNumber"] ??
-          json["kyc"]?["drivingLicense"]?["number"],
+      address:
+          json["address"] != null ? Address.fromJson(json["address"]) : null,
 
-      restaurant:
-          json["restaurant"] != null ? Restaurant.fromJson(json["restaurant"]) : null,
+      kyc: json["kyc"] != null ? Kyc.fromJson(json["kyc"]) : null,
 
       isActive: json["isActive"],
       isOnline: json["isOnline"],
       isAvailable: json["isAvailable"],
 
-      currentLocation: json["currentLocation"] != null
-          ? CurrentLocation.fromJson(json["currentLocation"])
-          : null,
-
-      kyc: json["kyc"] != null ? Kyc.fromJson(json["kyc"]) : null,
-
-    
-
-      totalOrders: json["totalOrders"],
       createdAt: json["createdAt"],
+      lastOnlineAt: json["lastOnlineAt"],
 
-      bankDetails: json["bankDetails"] != null
-    ? List<BankDetail>.from(
-        json["bankDetails"].map((x) => BankDetail.fromJson(x)))
-    : [],
-
+      restaurant: json["restaurant"] != null
+          ? Restaurant.fromJson(json["restaurant"])
+          : null,
     );
   }
 }
 
+class Address {
+  String? line1;
+  String? line2;
+  String? city;
+  String? state;
+  String? pincode;
 
+  Address({
+    this.line1,
+    this.line2,
+    this.city,
+    this.state,
+    this.pincode,
+  });
 
-class Restaurant {
-  String? id;
-  String? name;
-  Map<String, dynamic>? address;
-  Map<String, dynamic>? location;
-
-  Restaurant({this.id, this.name, this.address, this.location});
-
-  factory Restaurant.fromJson(Map<String, dynamic> json) {
-    return Restaurant(
-      id: json["_id"] ?? json["id"],
-      name: json["name"],
-      address: json["address"] ?? {},
-      location: json["location"] ?? {},
-    );
-  }
-}
-
-class CurrentLocation {
-  String? type;
-  List<double>? coordinates;
-  String? updatedAt;
-
-  CurrentLocation({this.type, this.coordinates, this.updatedAt});
-
-  factory CurrentLocation.fromJson(Map<String, dynamic> json) {
-    return CurrentLocation(
-      type: json["type"],
-      coordinates: json["coordinates"] != null
-          ? List<double>.from(json["coordinates"].map((x) => x.toDouble()))
-          : [],
-      updatedAt: json["updatedAt"],
+  factory Address.fromJson(Map<String, dynamic> json) {
+    return Address(
+      line1: json["line1"],
+      line2: json["line2"],
+      city: json["city"],
+      state: json["state"],
+      pincode: json["pincode"],
     );
   }
 }
 
 class Kyc {
-  String? status;
-  DocumentData? aadhaar;
-  DocumentData? pan;
-  DocumentData? drivingLicense;
+  String? aadhaarNumber;
+  String? panNumber;
+  String? drivingLicenseNumber;
 
-  Kyc({this.status, this.aadhaar, this.pan, this.drivingLicense});
+  KycDocuments? documents;
+  String? status;
+
+  Kyc({
+    this.aadhaarNumber,
+    this.panNumber,
+    this.drivingLicenseNumber,
+    this.documents,
+    this.status,
+  });
 
   factory Kyc.fromJson(Map<String, dynamic> json) {
     return Kyc(
+      aadhaarNumber: json["aadhaarNumber"],
+      panNumber: json["panNumber"],
+      drivingLicenseNumber: json["drivingLicenseNumber"],
       status: json["status"],
-      aadhaar: json["aadhaar"] != null
-          ? DocumentData.fromJson(json["aadhaar"])
-          : null,
-      pan: json["pan"] != null ? DocumentData.fromJson(json["pan"]) : null,
-      drivingLicense: json["drivingLicense"] != null
-          ? DocumentData.fromJson(json["drivingLicense"])
+      documents: json["documents"] != null
+          ? KycDocuments.fromJson(json["documents"])
           : null,
     );
   }
 }
 
-class DocumentData {
-  String? number;
- String? documentUrl;   // Aadhaar Front / PAN / DL
-  String? backUrl;       // Aadhaar Back (NEW FIELD)  bool? verified;
-    bool? verified;
+class KycDocuments {
+  String? aadhaarFront;
+  String? aadhaarBack;
+  String? panCard;
+  String? drivingLicense;
 
-
-  DocumentData({this.number, this.documentUrl, this.backUrl, this.verified});
-
- factory DocumentData.fromJson(Map<String, dynamic> json) {
-    return DocumentData(
-      number: json["number"],
-      documentUrl: json["documentUrl"],
-      backUrl: json["backUrl"],       // <-- ADD THIS
-      verified: json["verified"],
-    );
-  }
-}
-
-
-class BankDetail {
-  String? holderName;
-  String? accountNumber;
-  String? ifscCode;
-  String? mobile;
-  String? qrImage;
-
-  BankDetail({
-    this.holderName,
-    this.accountNumber,
-    this.ifscCode,
-    this.mobile,
-    this.qrImage,
+  KycDocuments({
+    this.aadhaarFront,
+    this.aadhaarBack,
+    this.panCard,
+    this.drivingLicense,
   });
 
-  factory BankDetail.fromJson(Map<String, dynamic> json) {
-    return BankDetail(
-      holderName: json["holderName"],
-      accountNumber: json["accountNumber"],
-      ifscCode: json["ifscCode"],
-      mobile: json["mobile"],
-      qrImage: json["qrImage"],
+  factory KycDocuments.fromJson(Map<String, dynamic> json) {
+    return KycDocuments(
+      aadhaarFront: json["aadhaarFront"],
+      aadhaarBack: json["aadhaarBack"],
+      panCard: json["panCard"],
+      drivingLicense: json["drivingLicense"],
+    );
+  }
+}
+
+class Restaurant {
+  String? id;
+  String? name;
+
+  Restaurant({this.id, this.name});
+
+  factory Restaurant.fromJson(Map<String, dynamic> json) {
+    return Restaurant(
+      id: json["id"] ?? json["_id"],
+      name: json["name"],
     );
   }
 }

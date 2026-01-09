@@ -10,9 +10,21 @@ class ApiEndpoint {
   static const String register = "/Self-register";
   static const String login = "/login";
   static const String toggleOnline = "/online-offline";
-    // static const String getprofile = "/profile";
-        static const String changePassword = "/changepassword";
 
+   static const String getprofile = "/profile";
+  static const String editProfile = "/edit-profile";  // ⭐ Added
+    static const String changePassword = "/change-password";  // ⭐ Added
+
+
+
+// ⭐ NEW ORDER APIs
+  static const String activeOrder = "/active-order";
+  static const String completedOrder = "/completed-order";
+  static const String orderCount = "/order-count";
+  static const String assignedOrder = "/assigned-order";
+
+
+static const String accountDetails = "/account-details";
 
 
 

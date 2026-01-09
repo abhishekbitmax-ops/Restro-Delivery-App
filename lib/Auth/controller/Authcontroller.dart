@@ -5,6 +5,8 @@ import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import 'package:restro_deliveryapp/Auth/model/authmodel.dart';
+import 'package:restro_deliveryapp/Auth/view/Profile.dart';
 import 'package:restro_deliveryapp/utils/SharedPref.dart';
 import 'package:restro_deliveryapp/utils/api_endpoints.dart';
 import 'package:geolocator/geolocator.dart';
@@ -262,4 +264,264 @@ Future<Map<String, dynamic>?> toggleOnlineStatus() async {
     return null;
   }
 }
+
+
+//profile data
+
+Future<DeliveryPartnerProfile?> getProfile() async {
+  try {
+    String token = await SharedPre.getAccessToken();
+
+    var res = await http.get(
+      Uri.parse(ApiEndpoint.getUrl(ApiEndpoint.getprofile)),
+      headers: {
+        "Authorization": "Bearer $token",
+      },
+    );
+
+    if (res.statusCode == 200) {
+      var body = jsonDecode(res.body);
+      return DeliveryPartnerProfile.fromJson(body);
+    } else {
+      print("Profile API Error: ${res.body}");
+      return null;
+    }
+  } catch (e) {
+    print("Profile API Exception: $e");
+    return null;
+  }
+}
+
+
+
+
+// ---------------- EDIT PROFILE API ----------------
+Future<bool> updateProfile({
+  required String name,
+  required String email,
+  required String address,
+  required String pincode,
+  File? profileImage,
+}) async {
+  try {
+    String token = await SharedPre.getAccessToken();   // ✅ correct
+
+    var request = http.MultipartRequest(
+      "POST",
+      Uri.parse(ApiEndpoint.getUrl(ApiEndpoint.editProfile)),
+    );
+
+    request.headers['Authorization'] = "Bearer $token";
+
+    request.fields['name'] = name;
+    request.fields['email'] = email;
+    request.fields['address'] = address;
+    request.fields['pincode'] = pincode;
+
+    if (profileImage != null) {
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'profileImage',
+          profileImage.path,
+        ),
+      );
+    }
+
+    var response = await request.send();
+    String body = await response.stream.bytesToString();
+
+    print("EDIT PROFILE RESPONSE = $body");
+
+    var json = jsonDecode(body);
+
+    return json["success"] == true;
+  } catch (e) {
+    print("Edit Profile API Error: $e");
+    return false;
+  }
+}
+
+// ---------------- GLOBAL POST API HELPER ----------------
+Future<Map<String, dynamic>?> postApi(String endpoint, Map body) async {
+  try {
+    String token = await SharedPre.getAccessToken(); // fetch saved token
+
+    final url = Uri.parse(ApiEndpoint.getUrl(endpoint));
+
+    final response = await http.post(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+      body: jsonEncode(body),
+    );
+
+    print("POST API RESPONSE (${endpoint}): ${response.body}");
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return jsonDecode(response.body);
+    } else {
+      return {
+        "success": false,
+        "message": "Server error: ${response.statusCode}"
+      };
+    }
+  } catch (e) {
+    print("POST API ERROR $endpoint : $e");
+    return {"success": false, "message": "Something went wrong"};
+  }
+}
+
+
+
+//change password
+
+// CHANGE PASSWORD API - FINAL FIXED METHOD
+Future<Map<String, dynamic>?> changePassword(String oldPass, String newPass) async {
+  try {
+    var response = await postApi(ApiEndpoint.changePassword, {
+      "oldPassword": oldPass,
+      "newPassword": newPass,
+    });
+
+    return response;
+  } catch (e) {
+    print("Change Password Error: $e");
+    return null;
+  }
+}
+
+// ----------------------------------------------------------------------
+// ⭐ ACTIVE ORDER
+// ----------------------------------------------------------------------
+Future<Map<String, dynamic>?> getActiveOrder() async {
+  try {
+    String token = await SharedPre.getAccessToken();
+
+    final response = await http.get(
+      Uri.parse(ApiEndpoint.getUrl(ApiEndpoint.activeOrder)),
+      headers: {"Authorization": "Bearer $token"},
+    );
+
+    print("ACTIVE ORDER RESPONSE: ${response.body}");
+    return jsonDecode(response.body);
+  } catch (e) {
+    print("ACTIVE ORDER ERROR: $e");
+    return null;
+  }
+}
+
+// ----------------------------------------------------------------------
+// ⭐ COMPLETED ORDER
+// ----------------------------------------------------------------------
+Future<Map<String, dynamic>?> getCompletedOrder() async {
+  try {
+    String token = await SharedPre.getAccessToken();
+
+    final response = await http.get(
+      Uri.parse(ApiEndpoint.getUrl(ApiEndpoint.completedOrder)),
+      headers: {"Authorization": "Bearer $token"},
+    );
+
+    print("COMPLETED ORDER RESPONSE: ${response.body}");
+    return jsonDecode(response.body);
+  } catch (e) {
+    print("COMPLETED ORDER ERROR: $e");
+    return null;
+  }
+}
+
+// ----------------------------------------------------------------------
+// ⭐ ORDER COUNT
+// ----------------------------------------------------------------------
+Future<Map<String, dynamic>?> getOrderCount() async {
+  try {
+    String token = await SharedPre.getAccessToken();
+
+    final response = await http.get(
+      Uri.parse(ApiEndpoint.getUrl(ApiEndpoint.orderCount)),
+      headers: {"Authorization": "Bearer $token"},
+    );
+
+    print("ORDER COUNT RESPONSE: ${response.body}");
+    return jsonDecode(response.body);
+  } catch (e) {
+    print("ORDER COUNT ERROR: $e");
+    return null;
+  }
+}
+
+// ----------------------------------------------------------------------
+// ⭐ ASSIGNED ORDER
+// ----------------------------------------------------------------------
+Future<Map<String, dynamic>?> getAssignedOrder() async {
+  try {
+    String token = await SharedPre.getAccessToken();
+
+    final response = await http.get(
+      Uri.parse(ApiEndpoint.getUrl(ApiEndpoint.assignedOrder)),
+      headers: {"Authorization": "Bearer $token"},
+    );
+
+    print("ASSIGNED ORDER RESPONSE: ${response.body}");
+    return jsonDecode(response.body);
+  } catch (e) {
+    print("ASSIGNED ORDER ERROR: $e");
+    return null;
+  }
+}
+
+
+// -----------------------------------------------------------
+// ⭐ SAVE BANK DETAILS API (FINAL, FULLY INTEGRATED VERSION)
+// -----------------------------------------------------------
+Future<Map<String, dynamic>?> saveBankDetails({
+  required String accountHolderName,
+  required String accountNumber,
+  required String ifscCode,
+  required String linkedMobile,
+  File? qrImage,
+}) async {
+  try {
+    String token = await SharedPre.getAccessToken();
+    String userId = await SharedPre.getUserId();  // FIXED
+
+    var request = http.MultipartRequest(
+      "POST",
+      Uri.parse(ApiEndpoint.getUrl(ApiEndpoint.accountDetails)),
+    );
+
+    request.headers['Authorization'] = "Bearer $token";
+
+    request.fields["userId"] = userId;
+    request.fields["accountHolderName"] = accountHolderName;
+    request.fields["accountNumber"] = accountNumber;
+    request.fields["ifscCode"] = ifscCode;
+    request.fields["linkedMobile"] = linkedMobile;
+
+    if (qrImage != null) {
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          "qrImage",
+          qrImage.path,
+          contentType: MediaType("image", "jpeg"),
+        ),
+      );
+    }
+
+    final response = await request.send();
+    final responseBody = await response.stream.bytesToString();
+
+    debugPrint("BANK DETAILS RESPONSE => $responseBody");
+
+    return jsonDecode(responseBody);
+  } catch (e) {
+    print("BANK DETAILS API ERROR => $e");
+    return {"success": false, "message": "Something went wrong"};
+  }
+}
+
+
+
 }

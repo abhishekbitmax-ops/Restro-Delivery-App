@@ -203,7 +203,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
   Widget _orderCard(Map<String, dynamic> order) {
     return GestureDetector(
       onTap: () {
-        Get.to(() => const PickupScreen(), arguments: order);
+        // Get.to(() => const PickupScreen(), arguments: order);
       },
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),

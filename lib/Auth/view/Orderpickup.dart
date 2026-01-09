@@ -5,10 +5,16 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:restro_deliveryapp/Auth/view/deliveryscreen.dart';
 
 class PickupScreen extends StatelessWidget {
-  const PickupScreen({super.key});
+  final Map<String, dynamic> orderData;
+
+  const PickupScreen({super.key, required this.orderData});
 
   Widget _itemRow(
-      BuildContext context, String name, String qty, IconData icon) {
+    BuildContext context,
+    String name,
+    String qty,
+    IconData icon,
+  ) {
     final width = MediaQuery.of(context).size.width;
 
     return Container(
@@ -60,6 +66,12 @@ class PickupScreen extends StatelessWidget {
     final width = MediaQuery.of(context).size.width;
     final topPadding = MediaQuery.of(context).padding.top;
 
+    // Extract all fields
+    final orderId = orderData["customOrderId"] ?? "-";
+    final customer = orderData["customer"] ?? {};
+    final location = orderData["location"] ?? {};
+    final items = (orderData["items"] ?? []) as List;
+
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
         statusBarColor: Color(0xFF8B0000),
@@ -74,18 +86,14 @@ class PickupScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            /// 🔥 PREMIUM HEADER WITH CENTER LOGO
+
+            /// 🔥 PREMIUM HEADER
             Container(
               width: double.infinity,
               padding: EdgeInsets.fromLTRB(16, topPadding + 10, 16, 22),
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [
-                    Color(0xFF7A0000),
-                    Color(0xFFB11212),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF7A0000), Color(0xFFB11212)],
                 ),
                 boxShadow: [
                   BoxShadow(
@@ -98,20 +106,14 @@ class PickupScreen extends StatelessWidget {
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  /// ⬅️ BACK BUTTON
                   Positioned(
                     left: 0,
                     child: IconButton(
-                      icon: const Icon(
-                        Icons.arrow_back,
-                        color: Colors.white,
-                        size: 26,
-                      ),
+                      icon: const Icon(Icons.arrow_back,
+                          color: Colors.white, size: 26),
                       onPressed: () => Get.back(),
                     ),
                   ),
-
-                  /// 🍽️ LOGO + TITLE (CENTER)
                   Column(
                     children: [
                       Container(
@@ -160,7 +162,7 @@ class PickupScreen extends StatelessWidget {
               child: Align(
                 alignment: Alignment.centerRight,
                 child: Text(
-                  "Order ID: #5699",
+                  "Order ID: $orderId",
                   style: GoogleFonts.poppins(
                     fontSize: width * 0.032,
                     fontWeight: FontWeight.w600,
@@ -172,7 +174,7 @@ class PickupScreen extends StatelessWidget {
 
             const SizedBox(height: 16),
 
-            /// 🏪 RESTAURANT CARD
+            /// 🏠 CUSTOMER & ADDRESS CARD
             Padding(
               padding: EdgeInsets.symmetric(horizontal: width * 0.045),
               child: Container(
@@ -190,26 +192,25 @@ class PickupScreen extends StatelessWidget {
                   ],
                 ),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Image.asset(
-                      "assets/profile_banner.png",
-                      height: width * 0.28,
-                      fit: BoxFit.contain,
-                      errorBuilder: (_, __, ___) =>
-                          const Icon(Icons.store,
-                              size: 60, color: Colors.black45),
-                    ),
-                    const SizedBox(height: 12),
                     Text(
-                      "New Delhi Restaurant",
+                      "Customer: ${customer["name"]}",
                       style: GoogleFonts.poppins(
-                        fontSize: width * 0.038,
-                        fontWeight: FontWeight.bold,
-                      ),
+                          fontSize: width * 0.038,
+                          fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      "Bhaijan Nagar, Springfield",
+                      "Phone: ${customer["phone"]}",
+                      style: GoogleFonts.poppins(
+                        fontSize: width * 0.032,
+                        color: Colors.black54,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "${location["addressLine"]}, ${location["city"]} - ${location["pincode"]}",
                       style: GoogleFonts.poppins(
                         fontSize: width * 0.032,
                         color: Colors.black45,
@@ -222,7 +223,7 @@ class PickupScreen extends StatelessWidget {
 
             const SizedBox(height: 28),
 
-            /// 🍽️ ORDER ITEMS
+            /// 🍽 ORDER ITEMS
             Padding(
               padding: EdgeInsets.symmetric(horizontal: width * 0.05),
               child: Text(
@@ -239,18 +240,22 @@ class PickupScreen extends StatelessWidget {
             Padding(
               padding: EdgeInsets.symmetric(horizontal: width * 0.045),
               child: Column(
-                children: [
-                  _itemRow(context, "Butter Chicken", "x1",
-                      Icons.lunch_dining_outlined),
-                  _itemRow(context, "Veg Biryani", "x1",
-                      Icons.rice_bowl_outlined),
-                ],
+                children: items
+                    .map(
+                      (e) => _itemRow(
+                        context,
+                        e["name"],
+                        "x${e["quantity"]}",
+                        Icons.lunch_dining_outlined,
+                      ),
+                    )
+                    .toList(),
               ),
             ),
 
             const SizedBox(height: 40),
 
-            /// ✅ CONFIRM PICKUP BUTTON
+            /// CONFIRM PICKUP BUTTON
             Padding(
               padding: EdgeInsets.symmetric(horizontal: width * 0.045),
               child: SizedBox(
@@ -259,10 +264,9 @@ class PickupScreen extends StatelessWidget {
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF8B0000),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
                     elevation: 5,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)),
                   ),
                   onPressed: () {
                     Get.to(const DeliveryScreen());
@@ -277,7 +281,7 @@ class PickupScreen extends StatelessWidget {
                   ),
                 ),
               ),
-            ),
+            )
           ],
         ),
       ),

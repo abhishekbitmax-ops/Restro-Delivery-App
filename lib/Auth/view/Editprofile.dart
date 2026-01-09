@@ -1,8 +1,10 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:restro_deliveryapp/Auth/controller/Authcontroller.dart';
 
 class Editprofile extends StatefulWidget {
   const Editprofile({super.key});
@@ -14,60 +16,97 @@ class Editprofile extends StatefulWidget {
 class _EditprofileState extends State<Editprofile> {
   final nameCtrl = TextEditingController();
   final emailCtrl = TextEditingController();
-  final addressCtrl = TextEditingController(); // ⭐ NEW
-
+  final addressCtrl = TextEditingController();
+  final pincodeCtrl = TextEditingController();
 
   File? profileImageFile;
-  final ImagePicker picker = ImagePicker();
+  String? profileImageUrl; // ⭐ API IMAGE URL
 
-  // ---------------------- IMAGE PICKER ----------------------
+  final ImagePicker picker = ImagePicker();
+  final AuthController authController = Get.put(AuthController());
+
+  @override
+  void initState() {
+    super.initState();
+    _loadExistingUserData();
+  }
+
+  // ---------- LOAD EXISTING PROFILE DATA ----------
+  void _loadExistingUserData() async {
+    var user = await authController.getProfile();
+
+    if (user != null && user.data != null) {
+      nameCtrl.text = user.data!.name ?? "";
+      emailCtrl.text = user.data!.email ?? "";
+      addressCtrl.text = user.data!.address?.line1 ?? "";
+      pincodeCtrl.text = user.data!.address?.pincode ?? "";
+
+      profileImageUrl = user.data!.profileImage ?? "";
+      setState(() {});
+    }
+  }
+
+  // ----------------- IMAGE PICKER -----------------
   Future<void> _pickImage(Function(File) onPicked) async {
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.fromLTRB(12, 0, 12, 20),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(18),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 10),
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-              const SizedBox(height: 14),
-              ListTile(
-                leading: const Icon(Icons.camera_alt),
-                title: const Text("Camera"),
-                onTap: () => Navigator.pop(ctx, ImageSource.camera),
-              ),
-              ListTile(
-                leading: const Icon(Icons.photo),
-                title: const Text("Gallery"),
-                onTap: () => Navigator.pop(ctx, ImageSource.gallery),
-              ),
-              const SizedBox(height: 10),
-            ],
-          ),
-        ),
-      ),
+      builder: (ctx) => _imageSourceSheet(ctx),
     );
 
     if (source != null) {
-      final picked = await picker.pickImage(source: source, imageQuality: 70);
+      final picked = await picker.pickImage(source: source, imageQuality: 80);
+
       if (picked != null) {
+        final ext = picked.name.split(".").last.toLowerCase();
+        if (ext != "jpg" && ext != "jpeg" && ext != "png") {
+          Get.snackbar("Invalid Image", "Only JPG, JPEG, PNG allowed!",
+              backgroundColor: Colors.red, colorText: Colors.white);
+          return;
+        }
+
         onPicked(File(picked.path));
       }
     }
+  }
+
+  // Image Source Bottom Sheet
+  Widget _imageSourceSheet(BuildContext ctx) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 20),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 10),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+            const SizedBox(height: 14),
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text("Camera"),
+              onTap: () => Navigator.pop(ctx, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo),
+              title: const Text("Gallery"),
+              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+            ),
+            const SizedBox(height: 10),
+          ],
+        ),
+      ),
+    );
   }
 
   // ---------------------- UI ----------------------
@@ -85,197 +124,196 @@ class _EditprofileState extends State<Editprofile> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ---------------------- HEADER ----------------------
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.only(
-                top: MediaQuery.of(context).padding.top + 16,
-                bottom: 26,
-              ),
-              decoration: const BoxDecoration(
-                color: Color(0xFF8B0000),
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(26),
-                  bottomRight: Radius.circular(26),
-                ),
-              ),
-              child: Stack(
-                children: [
-                  Positioned(
-                    left: 16,
-                    top: 6,
-                    child: InkWell(
-                      onTap: () => Navigator.pop(context),
-                      child: const CircleAvatar(
-                        radius: 18,
-                        backgroundColor: Colors.white,
-                        child: Icon(Icons.arrow_back, color: Color(0xFF8B0000)),
-                      ),
-                    ),
-                  ),
-                  Center(
-                    child: Column(
-                      children: [
-                        const SizedBox(height: 6),
-                        CircleAvatar(
-                          radius: 34,
-                          backgroundColor: Colors.white,
-                          child: Padding(
-                            padding: const EdgeInsets.all(6),
-                            child: Image.asset(
-                              "assets/images/restro_logo.jpg",
-                              fit: BoxFit.contain,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          "Edit Profile",
-                          style: GoogleFonts.poppins(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
+            _header(),
             const SizedBox(height: 28),
 
-            // ---------------------- PROFILE IMAGE ----------------------
-            Center(
-              child: Stack(
-                children: [
-                  CircleAvatar(
-                    radius: 52,
-                    backgroundColor: Colors.grey.shade200,
-                    backgroundImage: profileImageFile != null
-                        ? FileImage(profileImageFile!)
-                        : null,
-                    child: profileImageFile == null
-                        ? const Icon(Icons.person,
-                            size: 46, color: Colors.black45)
-                        : null,
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: GestureDetector(
-                      onTap: () {
-                        _pickImage((file) {
-                          setState(() => profileImageFile = file);
-                        });
-                      },
-                      child: const CircleAvatar(
-                        radius: 18,
-                        backgroundColor: Color(0xFF8B0000),
-                        child: Icon(Icons.camera_alt,
-                            size: 18, color: Colors.white),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            _profileImage(),
 
             const SizedBox(height: 36),
 
-            // ---------------------- SECTION: USER DETAILS ----------------------
             _section("User Details"),
             _field(nameCtrl, Icons.person_outline, "Full Name"),
             _field(emailCtrl, Icons.email_outlined, "Email Address"),
             _field(addressCtrl, Icons.location_on_outlined, "Address"),
+            _field(pincodeCtrl, Icons.numbers_outlined, "Pincode"),
 
-            
-
-           
             const SizedBox(height: 36),
-
-            // ---------------------- SAVE BUTTON ----------------------
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 22),
-              child: SizedBox(
-                height: 56,
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF8B0000),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-onPressed: () {
-  if (nameCtrl.text.isEmpty || emailCtrl.text.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Please fill all fields"),
-        backgroundColor: Colors.red,
-      ),
-    );
-    return;
-  }
-
-  // 🎉 SUCCESS POPUP
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (context) => Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.check_circle,
-                size: 60, color: Colors.green),
-            const SizedBox(height: 10),
-            Text(
-              "Profile Updated!",
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              "Your changes were saved successfully.",
-              textAlign: TextAlign.center,
-              style: GoogleFonts.poppins(fontSize: 13),
-            ),
-            const SizedBox(height: 20),
-          ],
-        ),
-      ),
-    ),
-  );
-
-  // ⏳ AUTO CLOSE POPUP & SCREEN
-  Future.delayed(const Duration(seconds: 2), () {
-    Navigator.pop(context); // close dialog
-    Navigator.pop(context); // go back to profile screen
-  });
-},
-                  child: Text(
-                    "Save Changes",
-                    style: GoogleFonts.poppins(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
-            ),
+            _saveButton(),
 
             const SizedBox(height: 30),
           ],
         ),
       ),
     );
+  }
+
+  // ---------------------- HEADER ----------------------
+  Widget _header() {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.only(
+        top: MediaQuery.of(context).padding.top + 16,
+        bottom: 26,
+      ),
+      decoration: const BoxDecoration(
+        color: Color(0xFF8B0000),
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(26),
+          bottomRight: Radius.circular(26),
+        ),
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            left: 16,
+            top: 6,
+            child: InkWell(
+              onTap: () => Navigator.pop(context),
+              child: const CircleAvatar(
+                radius: 18,
+                backgroundColor: Colors.white,
+                child: Icon(Icons.arrow_back, color: Color(0xFF8B0000)),
+              ),
+            ),
+          ),
+          Center(
+            child: Column(
+              children: [
+                const SizedBox(height: 6),
+                CircleAvatar(
+                  radius: 34,
+                  backgroundColor: Colors.white,
+                  child: Padding(
+                    padding: const EdgeInsets.all(6),
+                    child: Image.asset(
+                      "assets/images/restro_logo.jpg",
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  "Edit Profile",
+                  style: GoogleFonts.poppins(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ---------------------- PROFILE IMAGE ----------------------
+  Widget _profileImage() {
+    return Center(
+      child: Stack(
+        children: [
+          CircleAvatar(
+            radius: 52,
+            backgroundColor: Colors.grey.shade200,
+            backgroundImage: profileImageFile != null
+                ? FileImage(profileImageFile!)
+                : profileImageUrl != null && profileImageUrl!.isNotEmpty
+                    ? NetworkImage(profileImageUrl!)
+                    : null,
+            child: (profileImageFile == null &&
+                    (profileImageUrl == null || profileImageUrl!.isEmpty))
+                ? const Icon(Icons.person, size: 46, color: Colors.black45)
+                : null,
+          ),
+
+          // Camera Button
+          Positioned(
+            bottom: 0,
+            right: 0,
+            child: GestureDetector(
+              onTap: () {
+                _pickImage((file) {
+                  setState(() => profileImageFile = file);
+                });
+              },
+              child: const CircleAvatar(
+                radius: 18,
+                backgroundColor: Color(0xFF8B0000),
+                child: Icon(Icons.camera_alt, size: 18, color: Colors.white),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ---------------------- SAVE BUTTON ----------------------
+  Widget _saveButton() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 22),
+      child: SizedBox(
+        height: 56,
+        width: double.infinity,
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF8B0000),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+          ),
+          onPressed: _saveProfile,
+          child: Text(
+            "Save Changes",
+            style: GoogleFonts.poppins(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ---------------------- SAVE PROFILE API ----------------------
+  Future<void> _saveProfile() async {
+    if (nameCtrl.text.isEmpty ||
+        emailCtrl.text.isEmpty ||
+        addressCtrl.text.isEmpty ||
+        pincodeCtrl.text.isEmpty) {
+      Get.snackbar("Error", "Please fill all fields",
+          backgroundColor: Colors.red, colorText: Colors.white);
+      return;
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) =>
+          const Center(child: CircularProgressIndicator(color: Colors.red)),
+    );
+
+    bool success = await authController.updateProfile(
+      name: nameCtrl.text.trim(),
+      email: emailCtrl.text.trim(),
+      address: addressCtrl.text.trim(),
+      pincode: pincodeCtrl.text.trim(),
+      profileImage: profileImageFile,
+    );
+
+    Navigator.pop(context);
+
+    if (success) {
+      Get.snackbar("Success", "Profile Updated!",
+          backgroundColor: Colors.green, colorText: Colors.white);
+
+      Navigator.pop(context);
+    } else {
+      Get.snackbar("Error", "Profile update failed!",
+          backgroundColor: Colors.red, colorText: Colors.white);
+    }
   }
 
   // ---------------------- COMPONENTS ----------------------
@@ -294,22 +332,20 @@ onPressed: () {
         child: TextField(
           controller: c,
           obscureText: obscure,
-          decoration: _decoration(i, h),
-        ),
-      );
-
-  InputDecoration _decoration(IconData icon, String hint) => InputDecoration(
-        filled: true,
-        fillColor: Colors.grey.shade50,
-        hintText: hint,
-        prefixIcon: Icon(icon, size: 20),
-        border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide:
-              const BorderSide(color: Color(0xFF8B0000), width: 1.2),
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: Colors.grey.shade50,
+            hintText: h,
+            prefixIcon: Icon(i, size: 20),
+            border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide:
+                  const BorderSide(color: Color(0xFF8B0000), width: 1.2),
+            ),
+          ),
         ),
       );
 }
