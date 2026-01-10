@@ -27,14 +27,18 @@ class _DeliveryDashboardScreenState extends State<DeliveryDashboardScreen> {
 
   String? userName;
 
+  List<dynamic> activeOrdersData = [];
+List<dynamic> completedOrdersData = [];
+
+
   int activeOrders = 0;
   int completedOrders = 0;
   int orderCount = 0;
 
   Map<String, dynamic>? assignedOrderData;
 
-  /// SOCKET INSTANCE
-  late IO.Socket orderSocket;
+
+   late IO.Socket orderSocket;
 
   @override
   void initState() {
@@ -66,6 +70,7 @@ class _DeliveryDashboardScreenState extends State<DeliveryDashboardScreen> {
 
     /// TOKEN VERIFIED
     orderSocket.on("CONNECTION_ESTABLISHED", (data) {
+
       print("🔥 CONNECTION_ESTABLISHED: $data");
     });
 
@@ -122,42 +127,34 @@ orderSocket.on("ORDER_STATUS_UPDATED", (data) {
     }
   }
 
-  /// ⭐ LOAD ORDER DATA
+
+//load order data
+
 void loadOrderData() async {
   var active = await auth.getActiveOrder();
   var completed = await auth.getCompletedOrder();
   var count = await auth.getOrderCount();
 
-  // ⭐ API assigned order
-  var assigned = await auth.getAssignedOrder();
-
-  // ⭐ Local storage assigned order
+  // ⭐ Load ONLY local assigned order (from socket)
   var localAssigned = await SharedPre.getAssignedOrder();
 
   if (mounted) {
     setState(() {
-      // Update counts
-      activeOrders = active?["data"]?.length ?? 0;
-      completedOrders = completed?["data"]?.length ?? 0;
+      // ⭐ FIXED — Save full data list
+      activeOrdersData = active?["data"] ?? [];
+      completedOrdersData = completed?["data"] ?? [];
+
+      // ⭐ Update counts
+      activeOrders = activeOrdersData.length;
+      completedOrders = completedOrdersData.length;
+
       orderCount = count?["data"]?["activeOrders"] ?? 0;
 
-      // ⭐ PRIORITY 1 → If API sends assigned order
-      if (assigned != null && assigned["data"] != null) {
-        hasAssignedOrder = true;
-        assignedOrderData = assigned["data"];
-
-        // ⭐ Save latest order into local storage
-        SharedPre.saveAssignedOrder(assigned["data"]);
-      }
-
-      // ⭐ PRIORITY 2 → If API says no assigned order BUT we have local data
-      else if (localAssigned != null) {
+      // ⭐ Assigned order handling
+      if (localAssigned != null) {
         hasAssignedOrder = true;
         assignedOrderData = localAssigned;
-      }
-
-      // ⭐ PRIORITY 3 → No assigned order anywhere
-      else {
+      } else {
         hasAssignedOrder = false;
         assignedOrderData = null;
       }
@@ -166,12 +163,16 @@ void loadOrderData() async {
 }
 
 
+
+
   /// ⭐ DISPOSE SOCKET
   @override
   void dispose() {
     orderSocket.dispose();
     super.dispose();
   }
+
+
 
   // ⭐ (Rest of your UI code remains SAME – untouched)
 
@@ -414,7 +415,14 @@ void loadOrderData() async {
                           value: activeOrders.toString(),
                           icon: Icons.delivery_dining_outlined,
                           color: const Color(0xFF8B0000),
-                          onTap: () => Get.to(const MyOrdersScreen()),
+                      onTap: () => Get.to(() => MyOrdersScreen(
+  activeOrders: activeOrdersData,
+  completedOrders: completedOrdersData,
+  defaultTab: 0,   // ⭐ Open ACTIVE tab
+)),
+
+
+
                         ),
                         const SizedBox(width: 18),
                         _statusCard(
@@ -422,7 +430,13 @@ void loadOrderData() async {
                           value: completedOrders.toString(),
                           icon: Icons.check_circle_outline,
                           color: Colors.green,
-                          onTap: () {},
+                       onTap: () => Get.to(() => MyOrdersScreen(
+  activeOrders: activeOrdersData,
+  completedOrders: completedOrdersData,
+  defaultTab: 1,   // ⭐ Open COMPLETED tab
+)),
+
+
                         ),
                       ],
                     ),
@@ -441,7 +455,11 @@ void loadOrderData() async {
 
                    hasAssignedOrder
     ? GestureDetector(
-        onTap: () => Get.to(() => PickupScreen(orderData: assignedOrderData!)),
+    onTap: () => Get.to(() => PickupScreen(
+  orderData: assignedOrderData!,
+)),
+
+
         child: Container(
           padding: const EdgeInsets.all(26),
           decoration: BoxDecoration(

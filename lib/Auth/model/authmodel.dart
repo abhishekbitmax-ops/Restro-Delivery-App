@@ -256,7 +256,6 @@
 // }
 
 
-
 class DeliveryPartnerProfile {
   bool? success;
   String? message;
@@ -273,6 +272,9 @@ class DeliveryPartnerProfile {
   }
 }
 
+// =====================================================================
+// PROFILE DATA
+// =====================================================================
 class ProfileData {
   String? name;
   String? phone;
@@ -318,36 +320,39 @@ class ProfileData {
 
   factory ProfileData.fromJson(Map<String, dynamic> json) {
     return ProfileData(
-      name: json["name"],
-      phone: json["phone"],
-      email: json["email"],
-      profileImage: json["profileImage"],
+      name: json["name"] ?? "",
+      phone: json["phone"] ?? "",
+      email: json["email"] ?? "",
+      profileImage: json["profileImage"] ?? "",
 
-      dob: json["dob"],
-      gender: json["gender"],
+      dob: json["dob"] ?? "",
+      gender: json["gender"] ?? "",
 
-      vehicleType: json["vehicleType"],
-      vehicleNumber: json["vehicleNumber"],
+      vehicleType: json["vehicleType"] ?? "",
+      vehicleNumber: json["vehicleNumber"] ?? "",
 
       address:
-          json["address"] != null ? Address.fromJson(json["address"]) : null,
+          json["address"] != null ? Address.fromJson(json["address"]) : Address(),
 
-      kyc: json["kyc"] != null ? Kyc.fromJson(json["kyc"]) : null,
+      kyc: json["kyc"] != null ? Kyc.fromJson(json["kyc"]) : Kyc(),
 
-      isActive: json["isActive"],
-      isOnline: json["isOnline"],
-      isAvailable: json["isAvailable"],
+      isActive: json["isActive"] ?? false,
+      isOnline: json["isOnline"] ?? false,
+      isAvailable: json["isAvailable"] ?? false,
 
-      createdAt: json["createdAt"],
-      lastOnlineAt: json["lastOnlineAt"],
+      createdAt: json["createdAt"] ?? "",
+      lastOnlineAt: json["lastOnlineAt"] ?? "",
 
       restaurant: json["restaurant"] != null
           ? Restaurant.fromJson(json["restaurant"])
-          : null,
+          : Restaurant(),
     );
   }
 }
 
+// =====================================================================
+// ADDRESS
+// =====================================================================
 class Address {
   String? line1;
   String? line2;
@@ -365,15 +370,18 @@ class Address {
 
   factory Address.fromJson(Map<String, dynamic> json) {
     return Address(
-      line1: json["line1"],
-      line2: json["line2"],
-      city: json["city"],
-      state: json["state"],
-      pincode: json["pincode"],
+      line1: json["line1"] ?? "",
+      line2: json["line2"] ?? "",
+      city: json["city"] ?? "",
+      state: json["state"] ?? "",
+      pincode: json["pincode"] ?? "",
     );
   }
 }
 
+// =====================================================================
+// KYC
+// =====================================================================
 class Kyc {
   String? aadhaarNumber;
   String? panNumber;
@@ -392,17 +400,20 @@ class Kyc {
 
   factory Kyc.fromJson(Map<String, dynamic> json) {
     return Kyc(
-      aadhaarNumber: json["aadhaarNumber"],
-      panNumber: json["panNumber"],
-      drivingLicenseNumber: json["drivingLicenseNumber"],
-      status: json["status"],
+      aadhaarNumber: json["aadhaarNumber"] ?? "",
+      panNumber: json["panNumber"] ?? "",
+      drivingLicenseNumber: json["drivingLicenseNumber"] ?? "",
+      status: json["status"] ?? "",
       documents: json["documents"] != null
           ? KycDocuments.fromJson(json["documents"])
-          : null,
+          : KycDocuments(),
     );
   }
 }
 
+// =====================================================================
+// KYC DOCUMENTS
+// =====================================================================
 class KycDocuments {
   String? aadhaarFront;
   String? aadhaarBack;
@@ -418,14 +429,17 @@ class KycDocuments {
 
   factory KycDocuments.fromJson(Map<String, dynamic> json) {
     return KycDocuments(
-      aadhaarFront: json["aadhaarFront"],
-      aadhaarBack: json["aadhaarBack"],
-      panCard: json["panCard"],
-      drivingLicense: json["drivingLicense"],
+      aadhaarFront: json["aadhaarFront"] ?? "",
+      aadhaarBack: json["aadhaarBack"] ?? "",
+      panCard: json["panCard"] ?? "",
+      drivingLicense: json["drivingLicense"] ?? "",
     );
   }
 }
 
+// =====================================================================
+// RESTAURANT
+// =====================================================================
 class Restaurant {
   String? id;
   String? name;
@@ -434,9 +448,8 @@ class Restaurant {
 
   factory Restaurant.fromJson(Map<String, dynamic> json) {
     return Restaurant(
-      id: json["id"] ?? json["_id"],
-      name: json["name"],
+      id: json["id"] ?? json["_id"] ?? "",
+      name: json["name"] ?? "",
     );
   }
 }
-

@@ -32,20 +32,17 @@ class _DeliveryProfileScreenState extends State<DeliveryProfileScreen> {
     super.initState();
     fetchProfileData();
     loadLocalBankDetails();
-
   }
 
   void loadLocalBankDetails() async {
-  var data = await SharedPre.getBankDetailsLocal();
-  
-  setState(() {
-    accHolder = data["holder"];
-    accNumber = data["number"];
-    ifscCode = data["ifsc"];
-    mobileNumber = data["mobile"];
-  });
-}
-
+    var data = await SharedPre.getBankDetailsLocal();
+    setState(() {
+      accHolder = data["holder"];
+      accNumber = data["number"];
+      ifscCode = data["ifsc"];
+      mobileNumber = data["mobile"];
+    });
+  }
 
   void fetchProfileData() async {
     var res = await authController.getProfile();
@@ -56,6 +53,37 @@ class _DeliveryProfileScreenState extends State<DeliveryProfileScreen> {
     }
   }
 
+  // ⭐ CLOUDINARY IMAGE LOADER
+  Widget cloudImg(String? url, double size) {
+    if (url == null || url.isEmpty) {
+      return Image.asset(
+        "assets/images/restro_logo.jpg",
+        width: size,
+        height: size,
+        fit: BoxFit.cover,
+      );
+    }
+
+    return Image.network(
+      url,
+      width: size,
+      height: size,
+      fit: BoxFit.cover,
+      loadingBuilder: (context, child, progress) {
+        if (progress == null) return child;
+        return Center(child: CircularProgressIndicator(color: Colors.red));
+      },
+      errorBuilder: (_, __, ___) {
+        return Image.asset(
+          "assets/images/restro_logo.jpg",
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+        );
+      },
+    );
+  }
+
   // INFO ROW
   Widget _infoRow(String title, String value) {
     return Padding(
@@ -64,14 +92,11 @@ class _DeliveryProfileScreenState extends State<DeliveryProfileScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(title,
-              style: GoogleFonts.poppins(
-                  fontSize: 13, fontWeight: FontWeight.w500)),
+              style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500)),
           Flexible(
             child: Text(value,
                 style: GoogleFonts.poppins(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black54),
+                    fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black54),
                 textAlign: TextAlign.right),
           ),
         ],
@@ -79,7 +104,7 @@ class _DeliveryProfileScreenState extends State<DeliveryProfileScreen> {
     );
   }
 
-  // DOCUMENT ROW
+  // ⭐ DOCUMENT ROW UPDATED
   Widget _docRow(String title, String? url) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -87,31 +112,12 @@ class _DeliveryProfileScreenState extends State<DeliveryProfileScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(title,
-              style:
-                  GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500)),
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.black12),
-            ),
-            child: (url == null || url.isEmpty)
-                ? Image.asset(
-                    "assets/images/restro_logo.jpg",
-                    fit: BoxFit.cover,
-                  )
-                : Image.network(
-                    url,
-                    fit: BoxFit.cover,
-                    errorBuilder: (c, e, s) {
-                      return Image.asset(
-                        "assets/images/restro_logo.jpg",
-                        fit: BoxFit.cover,
-                      );
-                    },
-                  ),
-          )
+              style: GoogleFonts.poppins(
+                  fontSize: 13, fontWeight: FontWeight.w500)),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: cloudImg(url, 60),
+          ),
         ],
       ),
     );
@@ -156,8 +162,8 @@ class _DeliveryProfileScreenState extends State<DeliveryProfileScreen> {
               const SizedBox(height: 16),
               Center(
                 child: Text(isEdit ? "Edit Bank Details" : "Add Bank Details",
-                    style: GoogleFonts.poppins(
-                        fontSize: 18, fontWeight: FontWeight.w600)),
+                    style:
+                        GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600)),
               ),
               const SizedBox(height: 20),
               _inputField("Account Holder Name", nameCtrl),
@@ -167,6 +173,7 @@ class _DeliveryProfileScreenState extends State<DeliveryProfileScreen> {
               _inputField("Mobile Number", mobileCtrl,
                   inputType: TextInputType.phone),
               const SizedBox(height: 25),
+
               Row(
                 children: [
                   Expanded(
@@ -186,6 +193,7 @@ class _DeliveryProfileScreenState extends State<DeliveryProfileScreen> {
                     ),
                   ),
                   const SizedBox(width: 12),
+
                   Expanded(
                     child: SizedBox(
                       height: 52,
@@ -203,9 +211,6 @@ class _DeliveryProfileScreenState extends State<DeliveryProfileScreen> {
                             return;
                           }
 
-                          // ------------------------------------------
-                          // ⭐ BANK API CALL
-                          // ------------------------------------------
                           var response = await authController.saveBankDetails(
                             accountHolderName: nameCtrl.text.trim(),
                             accountNumber: accCtrl.text.trim(),
@@ -214,41 +219,29 @@ class _DeliveryProfileScreenState extends State<DeliveryProfileScreen> {
                             qrImage: null,
                           );
 
-                          if (response != null &&
-                              response["success"] == true) {
+                          if (response != null && response["success"] == true) {
                             setState(() {
-  accHolder = nameCtrl.text.trim();
-  accNumber = accCtrl.text.trim();
-  ifscCode = ifscCtrl.text.trim();
-  mobileNumber = mobileCtrl.text.trim();
-});
+                              accHolder = nameCtrl.text.trim();
+                              accNumber = accCtrl.text.trim();
+                              ifscCode = ifscCtrl.text.trim();
+                              mobileNumber = mobileCtrl.text.trim();
+                            });
 
-// ⭐ Local Save
-SharedPre.saveBankDetailsLocal(
-  holder: accHolder!,
-  number: accNumber!,
-  ifsc: ifscCode!,
-  mobile: mobileNumber!,
-);
+                            SharedPre.saveBankDetailsLocal(
+                              holder: accHolder!,
+                              number: accNumber!,
+                              ifsc: ifscCode!,
+                              mobile: mobileNumber!,
+                            );
 
                             Navigator.pop(context);
 
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text(
-                                    isEdit
-                                        ? "Bank Details Updated Successfully!"
-                                        : "Bank Details Saved Successfully!",
-                                ),
+                                content: Text(isEdit
+                                    ? "Bank Details Updated Successfully!"
+                                    : "Bank Details Saved Successfully!"),
                                 backgroundColor: Colors.green,
-                              ),
-                            );
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content:
-                                    Text(response?["message"] ?? "Failed"),
-                                backgroundColor: Colors.red,
                               ),
                             );
                           }
@@ -268,7 +261,6 @@ SharedPre.saveBankDetailsLocal(
                   ),
                 ],
               ),
-              const SizedBox(height: 25),
             ],
           ),
         );
@@ -289,8 +281,8 @@ SharedPre.saveBankDetailsLocal(
           labelStyle: GoogleFonts.poppins(fontSize: 13),
           filled: true,
           fillColor: Colors.grey.shade100,
-          contentPadding:
-              const EdgeInsets.symmetric(vertical: 14, horizontal: 14),
+          contentPadding: const EdgeInsets.symmetric(
+              vertical: 14, horizontal: 14),
           border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(color: Colors.grey.shade300)),
@@ -348,8 +340,8 @@ SharedPre.saveBankDetailsLocal(
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           title: Text("Logout",
-              style: GoogleFonts.poppins(
-                  fontSize: 17, fontWeight: FontWeight.w600)),
+              style:
+                  GoogleFonts.poppins(fontSize: 17, fontWeight: FontWeight.w600)),
           content: Text("Are you sure you want to logout?",
               style: GoogleFonts.poppins(fontSize: 14)),
           actions: [
@@ -388,7 +380,7 @@ SharedPre.saveBankDetailsLocal(
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // HEADER
+            // ⭐ HEADER — NOT CHANGED
             Container(
               width: double.infinity,
               padding: EdgeInsets.only(
@@ -407,38 +399,24 @@ SharedPre.saveBankDetailsLocal(
                       child: const CircleAvatar(
                         radius: 18,
                         backgroundColor: Colors.white,
-                        child:
-                            Icon(Icons.arrow_back, color: Color(0xFF8B0000)),
+                        child: Icon(Icons.arrow_back, color: Color(0xFF8B0000)),
                       ),
                     ),
                   ),
+
+                  // ⭐ STATIC HEADER IMAGE
                   Column(
                     children: [
                       CircleAvatar(
                         radius: 26,
                         backgroundColor: Colors.white,
                         child: ClipOval(
-                          child: (p?.profileImage == null)
-                              ? Image.asset(
-                                  "assets/images/restro_logo.jpg",
-                                  width: 44,
-                                  height: 44,
-                                  fit: BoxFit.cover,
-                                )
-                              : Image.network(
-                                  p!.profileImage!,
-                                  width: 44,
-                                  height: 44,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (c, e, s) {
-                                    return Image.asset(
-                                      "assets/images/restro_logo.jpg",
-                                      width: 44,
-                                      height: 44,
-                                      fit: BoxFit.cover,
-                                    );
-                                  },
-                                ),
+                          child: Image.asset(
+                            "assets/images/restro_logo.jpg",
+                            width: 44,
+                            height: 44,
+                            fit: BoxFit.cover,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 6),
@@ -455,39 +433,19 @@ SharedPre.saveBankDetailsLocal(
 
             const SizedBox(height: 30),
 
+            // ⭐ CLOUDINARY PROFILE PIC
             CircleAvatar(
               radius: 60,
               backgroundColor: Colors.grey,
               child: ClipOval(
-                child: (p?.profileImage == null)
-                    ? Image.asset(
-                        "assets/images/restro_logo.jpg",
-                        width: 120,
-                        height: 120,
-                        fit: BoxFit.cover,
-                      )
-                    : Image.network(
-                        p!.profileImage!,
-                        width: 120,
-                        height: 120,
-                        fit: BoxFit.cover,
-                        errorBuilder: (c, e, s) {
-                          return Image.asset(
-                            "assets/images/restro_logo.jpg",
-                            width: 120,
-                            height: 120,
-                            fit: BoxFit.cover,
-                          );
-                        },
-                      ),
+                child: cloudImg(p?.profileImage, 120),
               ),
             ),
 
             const SizedBox(height: 14),
 
             Text(p?.name ?? "Loading...",
-                style: GoogleFonts.poppins(
-                    fontSize: 18, fontWeight: FontWeight.bold)),
+                style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold)),
             Text("+91 ${p?.phone ?? ""}",
                 style: GoogleFonts.poppins(fontSize: 13, color: Colors.black54)),
             Text(p?.email ?? "",
@@ -502,15 +460,13 @@ SharedPre.saveBankDetailsLocal(
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: () {
-                    Navigator.push(context,
-                        MaterialPageRoute(builder: (context) => const Editprofile()));
+                    Navigator.push(
+                        context, MaterialPageRoute(builder: (context) => const Editprofile()));
                   },
                   icon: const Icon(Icons.edit, color: Colors.white),
                   label: Text("EDIT PROFILE",
                       style: GoogleFonts.poppins(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white)),
+                          fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF8B0000),
                     shape: RoundedRectangleBorder(
@@ -524,8 +480,7 @@ SharedPre.saveBankDetailsLocal(
 
             Card(
               margin: const EdgeInsets.symmetric(horizontal: 18),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -536,34 +491,29 @@ SharedPre.saveBankDetailsLocal(
                         "Address",
                         p?.address == null
                             ? "-"
-                            : "${p!.address!.line1}, "
-                                "${p.address!.line2}, "
-                                "${p.address!.city}, "
-                                "${p.address!.state} - "
-                                "${p.address!.pincode}"),
+                            : "${p!.address!.line1}, ${p.address!.line2}, "
+                                "${p.address!.city}, ${p.address!.state} - ${p.address!.pincode}"),
                     _infoRow("Vehicle Type", p?.vehicleType ?? "-"),
                     _infoRow("Vehicle Number", p?.vehicleNumber ?? "-"),
                     _infoRow("Aadhaar Number", p?.kyc?.aadhaarNumber ?? "-"),
                     _infoRow("PAN Number", p?.kyc?.panNumber ?? "-"),
-                    _infoRow("Driving License",
-                        p?.kyc?.drivingLicenseNumber ?? "-"),
+                    _infoRow(
+                        "Driving License", p?.kyc?.drivingLicenseNumber ?? "-"),
 
                     const SizedBox(height: 10),
                     const Divider(),
                     const SizedBox(height: 10),
 
                     Text("KYC Documents",
-                        style: GoogleFonts.poppins(
-                            fontSize: 14, fontWeight: FontWeight.bold)),
+                        style:
+                            GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 10),
 
-                    _docRow(
-                        "Aadhaar Front", p?.kyc?.documents?.aadhaarFront),
-                    _docRow("Aadhaar Back",
-                        p?.kyc?.documents?.aadhaarBack),
+                    // ⭐ CLOUDINARY KYC IMAGES
+                    _docRow("Aadhaar Front", p?.kyc?.documents?.aadhaarFront),
+                    _docRow("Aadhaar Back", p?.kyc?.documents?.aadhaarBack),
                     _docRow("PAN Card", p?.kyc?.documents?.panCard),
-                    _docRow("Driving License",
-                        p?.kyc?.documents?.drivingLicense),
+                    _docRow("Driving License", p?.kyc?.documents?.drivingLicense),
 
                     const SizedBox(height: 20),
 
@@ -613,12 +563,12 @@ SharedPre.saveBankDetailsLocal(
               child: Column(
                 children: [
                   _profileOption(
-                    title: "Settings",
-                    icon: Icons.settings_outlined,
-                    onTap: () => Get.to(() => const DeliverySettingsScreen()),
-                  ),
+                      title: "Settings",
+                      icon: Icons.settings_outlined,
+                      onTap: () => Get.to(() => const DeliverySettingsScreen())),
 
                   const SizedBox(height: 12),
+
                   _profileOption(
                       title: "Logout",
                       icon: Icons.logout,

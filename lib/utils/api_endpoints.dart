@@ -21,10 +21,20 @@ class ApiEndpoint {
   static const String activeOrder = "/active-order";
   static const String completedOrder = "/completed-order";
   static const String orderCount = "/order-count";
-  static const String assignedOrder = "/assigned-order";
+  // static const String assignedOrder = "/assigned-order";
 
 
 static const String accountDetails = "/account-details";
+
+
+ // ⭐ DYNAMIC API ENDPOINTS
+  static String startDelivery(String orderId) {
+    return "/start-delivery/$orderId";
+  }
+
+  static String verifyOtp(String orderId) {
+    return "/$orderId/verify-otp";
+  }
 
 
 

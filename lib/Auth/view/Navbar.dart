@@ -19,7 +19,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
 
   final screens = [
     const DeliveryDashboardScreen(),
-    const MyOrdersScreen(),
+    const MyOrdersScreen(activeOrders: [], completedOrders: [],),
     const DeliveryEarningsScreen(),
     DeliveryProfileScreen(),
   ];

@@ -2,10 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:restro_deliveryapp/Auth/view/Orderpickup.dart';
+import 'package:restro_deliveryapp/Auth/view/order_details_screen.dart';
 
 class MyOrdersScreen extends StatefulWidget {
-  const MyOrdersScreen({super.key});
+  final List<dynamic> activeOrders;
+  final List<dynamic> completedOrders;
+  final int defaultTab; // 0 = active, 1 = completed
+
+  const MyOrdersScreen({
+    super.key,
+    required this.activeOrders,
+    required this.completedOrders,
+    this.defaultTab = 0,
+  });
 
   @override
   State<MyOrdersScreen> createState() => _MyOrdersScreenState();
@@ -14,30 +23,10 @@ class MyOrdersScreen extends StatefulWidget {
 class _MyOrdersScreenState extends State<MyOrdersScreen> {
   int selectedTab = 0;
 
-  final orders = [
-    {
-      "name": "Rakesh Kumar",
-      "address": "1234 Elm St, Springfield",
-      "price": "₹540",
-      "status": "Delivered",
-      "time": "Today at 10:30 AM",
-      "active": true,
-    },
-    {
-      "name": "John Doe",
-      "address": "Bhaijan Nagar",
-      "price": "₹650",
-      "status": "Pending",
-      "time": "Today at 9:00 AM",
-      "active": false,
-    },
-  ];
-
-  List<Map<String, dynamic>> get filteredOrders {
-    return orders
-        .where((order) =>
-            selectedTab == 0 ? order["active"] == true : order["active"] == false)
-        .toList();
+  @override
+  void initState() {
+    super.initState();
+    selectedTab = widget.defaultTab; // 🔥 load correct tab
   }
 
   @override
@@ -53,41 +42,22 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
       backgroundColor: const Color(0xFFF6F6F6),
       body: Column(
         children: [
-          /// 🔥 MODERN HEADER WITH LOGO
+          // 🔥 HEADER
           Container(
             padding: const EdgeInsets.fromLTRB(16, 44, 16, 20),
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [
-                  Color(0xFF7A0000),
-                  Color(0xFFB11212),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+                colors: [Color(0xFF7A0000), Color(0xFFB11212)],
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black26,
-                  blurRadius: 12,
-                  offset: Offset(0, 4),
-                ),
-              ],
             ),
             child: Row(
               children: [
-                // 🍽️ APP LOGO
                 Container(
                   height: 42,
                   width: 42,
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     color: Colors.white,
                     shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        blurRadius: 10,
-                        color: Colors.black.withOpacity(0.3),
-                      ),
-                    ],
                   ),
                   child: Padding(
                     padding: const EdgeInsets.all(6),
@@ -99,9 +69,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                     ),
                   ),
                 ),
-
                 const SizedBox(width: 12),
-
                 Text(
                   "My Orders",
                   style: GoogleFonts.poppins(
@@ -110,20 +78,14 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                     color: Colors.white,
                   ),
                 ),
-
                 const Spacer(),
-
-                // IconButton(
-                //   icon: const Icon(Icons.arrow_back, color: Colors.white),
-                //   onPressed: () => Navigator.pop(context),
-                // ),
               ],
             ),
           ),
 
           const SizedBox(height: 20),
 
-          /// 🔘 TABS
+          // ⭐ UPDATED TABS (Active + Completed)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Container(
@@ -131,18 +93,12 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    blurRadius: 12,
-                    color: Colors.black.withOpacity(0.05),
-                  ),
-                ],
               ),
               child: Row(
                 children: [
                   _tabButton("Active Orders", 0),
                   const SizedBox(width: 6),
-                  _tabButton("Past Orders", 1),
+                  _tabButton("Completed Orders", 1),
                 ],
               ),
             ),
@@ -150,23 +106,18 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
 
           const SizedBox(height: 20),
 
-          /// 📦 ORDER LIST
+          // 📦 LIST VIEW
           Expanded(
-            child: filteredOrders.isEmpty
-                ? _emptyState()
-                : ListView.builder(
-                    itemCount: filteredOrders.length,
-                    itemBuilder: (context, index) {
-                      return _orderCard(filteredOrders[index]);
-                    },
-                  ),
+            child: selectedTab == 0
+                ? _buildOrderList(widget.activeOrders)      // Only ACTIVE
+                : _buildOrderList(widget.completedOrders),  // Only COMPLETED
           ),
         ],
       ),
     );
   }
 
-  /// 🔘 TAB BUTTON
+  // 🔘 TAB BUTTON UI
   Widget _tabButton(String label, int index) {
     final active = selectedTab == index;
 
@@ -199,25 +150,39 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
     );
   }
 
-  /// 🧾 ORDER CARD
-  Widget _orderCard(Map<String, dynamic> order) {
+  // 🧾 ORDER LIST
+  Widget _buildOrderList(List<dynamic> orders) {
+    if (orders.isEmpty) return _emptyState();
+
+    return ListView.builder(
+      itemCount: orders.length,
+      itemBuilder: (context, index) => _orderCard(orders[index]),
+    );
+  }
+
+  // 🧾 ORDER CARD
+  Widget _orderCard(dynamic order) {
+    final address = order["deliveryAddress"] ?? {};
+    final restaurant = order["restaurant"] ?? {};
+    final items = order["items"] ?? [];
+
+    final orderId = order["orderNumber"] ?? "-";
+    final status = order["status"] ?? "UNKNOWN";
+    final total = order["total"] ?? 0;
+
     return GestureDetector(
-      onTap: () {
-        // Get.to(() => const PickupScreen(), arguments: order);
-      },
+      onTap: () => Get.to(() => OrderDetailsScreen(orderData: order)),
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Colors.white, Colors.red.shade50],
-          ),
+          color: Colors.white,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              blurRadius: 18,
-              color: Colors.black.withOpacity(0.06),
-              offset: const Offset(0, 10),
+              blurRadius: 12,
+              color: Colors.black.withOpacity(0.08),
+              offset: const Offset(0, 6),
             ),
           ],
         ),
@@ -226,28 +191,47 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
           children: [
             Row(
               children: [
-                const Icon(Icons.person, size: 20),
-                const SizedBox(width: 8),
                 Text(
-                  order["name"],
+                  "#$orderId",
                   style: GoogleFonts.poppins(
-                    fontSize: 14,
+                    fontSize: 13,
                     fontWeight: FontWeight.w600,
+                    color: Colors.red.shade700,
                   ),
                 ),
                 const Spacer(),
-                _statusBadge(order),
+                _statusBadge(status),
               ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
+
             Row(
               children: [
-                const Icon(Icons.location_on,
-                    size: 14, color: Colors.redAccent),
+                const Icon(Icons.store, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    restaurant["name"] ?? "Restaurant",
+                    style: GoogleFonts.poppins(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 8),
+
+            Row(
+              children: [
+                const Icon(Icons.location_on, size: 16, color: Colors.redAccent),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    order["address"],
+                    "${address["addressLine"] ?? "-"}, "
+                    "${address["city"] ?? ""} - "
+                    "${address["pincode"] ?? ""}",
                     style: GoogleFonts.poppins(
                       fontSize: 12,
                       color: Colors.black54,
@@ -256,17 +240,13 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            Text(
-              order["time"],
-              style:
-                  GoogleFonts.poppins(fontSize: 10, color: Colors.black38),
-            ),
-            const SizedBox(height: 14),
+
+            const SizedBox(height: 10),
+
             Row(
               children: [
                 Text(
-                  "Order Amount",
+                  "${items.length} items",
                   style: GoogleFonts.poppins(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
@@ -274,11 +254,11 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                 ),
                 const Spacer(),
                 Text(
-                  order["price"],
+                  "₹$total",
                   style: GoogleFonts.poppins(
-                    fontSize: 14,
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: const Color(0xFF8B0000),
+                    color: Colors.green.shade700,
                   ),
                 ),
               ],
@@ -289,35 +269,52 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
     );
   }
 
-  /// 🏷️ STATUS BADGE
-  Widget _statusBadge(Map<String, dynamic> order) {
-    final isActive = order["active"] == true;
+  // STATUS BADGE
+  Widget _statusBadge(String status) {
+    Color bg;
+    Color text;
+
+    switch (status) {
+      case "OUT_FOR_DELIVERY":
+        bg = Colors.blue.shade100;
+        text = Colors.blue.shade900;
+        break;
+      case "READY_FOR_PICKUP":
+        bg = Colors.orange.shade100;
+        text = Colors.orange.shade900;
+        break;
+      case "DELIVERED":
+        bg = Colors.green.shade100;
+        text = Colors.green.shade900;
+        break;
+      default:
+        bg = Colors.grey.shade200;
+        text = Colors.grey.shade700;
+    }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
       decoration: BoxDecoration(
-        color: isActive ? Colors.green.shade100 : Colors.orange.shade100,
+        color: bg,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
-        isActive ? "ACTIVE" : order["status"].toUpperCase(),
+        status,
         style: GoogleFonts.poppins(
           fontSize: 10,
           fontWeight: FontWeight.w600,
-          color: isActive ? Colors.green : Colors.deepOrange,
+          color: text,
         ),
       ),
     );
   }
 
-  /// 📭 EMPTY STATE
   Widget _emptyState() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.inbox_outlined,
-              size: 60, color: Colors.grey.shade400),
+          Icon(Icons.inbox_outlined, size: 60, color: Colors.grey.shade400),
           const SizedBox(height: 14),
           Text(
             "No orders found",

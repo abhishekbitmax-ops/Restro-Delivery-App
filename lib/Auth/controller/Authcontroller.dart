@@ -39,136 +39,95 @@ class AuthController extends GetxController {
   // ----------------------------------------------------
   // REGISTER DELIVERY PARTNER (FINAL FIXED VERSION)
   // ----------------------------------------------------
-  Future<void> registerDeliveryPartner({
-    required String name,
-    required String phone,
-    required String email,
-    required String password,
-    required String dob,
-    required String gender,
+ // ----------------------------------------------------
+// REGISTER DELIVERY PARTNER  — CLOUDINARY VERSION
+// ----------------------------------------------------
+Future<void> registerDeliveryPartner({
+  required String name,
+  required String phone,
+  required String email,
+  required String password,
+  required String dob,
+  required String gender,
 
-   required String addressLine1,
-required String addressLine2,
-required String city,
-required String state,
-required String pincode,
+  required String addressLine1,
+  required String addressLine2,
+  required String city,
+  required String state,
+  required String pincode,
 
+  required String vehicleType,
+  required String vehicleNumber,
 
-    required String vehicleType,
-    required String vehicleNumber,
+  required String aadhaarNumber,
+  required String panNumber,
+  required String dlNumber,
 
-    required String aadhaarNumber,
-    required String panNumber,
-    required String dlNumber,
-
-    required File? profileImage,
-    required File? aadhaarFront,
-    required File? aadhaarBack,
-    required File? panImage,
-    required File? dlImage,
-  }) async {
-
-    if (profileImage == null ||
-        aadhaarFront == null ||
-        aadhaarBack == null ||
-        panImage == null ||
-        dlImage == null) {
-      Get.snackbar("Error", "All document images are required",
-          backgroundColor: Colors.red, colorText: Colors.white);
-      return;
-    }
-
-    Get.dialog(
-      const Center(child: CircularProgressIndicator(color: Colors.red)),
-      barrierDismissible: false,
-    );
-
-    try {
-      final url = ApiEndpoint.getUrl(ApiEndpoint.register);
-      var request = http.MultipartRequest("POST", Uri.parse(url));
-
-      // -------- TEXT FIELDS EXACTLY AS BACKEND EXPECTS --------
-      request.fields["name"] = name;
-      request.fields["phone"] = phone;
-      request.fields["email"] = email;
-      request.fields["password"] = password;
-
-      request.fields["dob"] = dob;
-      request.fields["gender"] = gender;
-
-      request.fields["addressLine1"] = addressLine1;
-request.fields["addressLine2"] = addressLine2;
-request.fields["city"] = city;
-request.fields["state"] = state;
-request.fields["pincode"] = pincode;
+  String? profileImageUrl,
+  String? aadhaarFrontUrl,
+  String? aadhaarBackUrl,
+  String? panUrl,
+  String? dlUrl,
+}) async {
 
 
-      request.fields["vehicleType"] = vehicleType;
-      request.fields["vehicleNumber"] = vehicleNumber;
+  Get.dialog(const Center(child: CircularProgressIndicator(color: Colors.red)),
+      barrierDismissible: false);
 
-      request.fields["aadhaarNumber"] = aadhaarNumber;
-      request.fields["panNumber"] = panNumber;
-      request.fields["licenseNumber"] = dlNumber;
+  try {
+    final url = ApiEndpoint.getUrl(ApiEndpoint.register);
+    var request = http.MultipartRequest("POST", Uri.parse(url));
 
-      // -------------------- FILE FIELDS (EXACT BACKEND NAMES) --------------------
- request.files.add(await http.MultipartFile.fromPath(
-  "profileImage",
-  profileImage.path,
-  contentType: MediaType("image", _getMimeType(profileImage.path)),
-));
+    // TEXT FIELDS
+    request.fields["name"] = name;
+    request.fields["phone"] = phone;
+    request.fields["email"] = email;
+    request.fields["password"] = password;
+    request.fields["dob"] = dob;
+    request.fields["gender"] = gender;
 
-request.files.add(await http.MultipartFile.fromPath(
-  "aadhaarFrontImage",
-  aadhaarFront.path,
-  contentType: MediaType("image", _getMimeType(aadhaarFront.path)),
-));
+    request.fields["addressLine1"] = addressLine1;
+    request.fields["addressLine2"] = addressLine2;
+    request.fields["city"] = city;
+    request.fields["state"] = state;
+    request.fields["pincode"] = pincode;
 
-request.files.add(await http.MultipartFile.fromPath(
-  "aadhaarBackImage",
-  aadhaarBack.path,
-  contentType: MediaType("image", _getMimeType(aadhaarBack.path)),
-));
+    request.fields["vehicleType"] = vehicleType;
+    request.fields["vehicleNumber"] = vehicleNumber;
 
-request.files.add(await http.MultipartFile.fromPath(
-  "panImage",
-  panImage.path,
-  contentType: MediaType("image", _getMimeType(panImage.path)),
-));
+    request.fields["aadhaarNumber"] = aadhaarNumber;
+    request.fields["panNumber"] = panNumber;
+    request.fields["licenseNumber"] = dlNumber;
 
-request.files.add(await http.MultipartFile.fromPath(
-  "licenseImage",
-  dlImage.path,
-  contentType: MediaType("image", _getMimeType(dlImage.path)),
-));
+    // ⭐ SEND CLOUDINARY URLS (exact backend keys)
+  request.fields["profileImage"] = profileImageUrl ?? "";
+request.fields["aadhaarFrontImage"] = aadhaarFrontUrl ?? "";
+request.fields["aadhaarBackImage"] = aadhaarBackUrl ?? "";
+request.fields["panImage"] = panUrl ?? "";
+request.fields["licenseImage"] = dlUrl ?? "";
 
+    final response = await request.send();
+    final resp = await response.stream.bytesToString();
+    Get.back();
 
+    final data = jsonDecode(resp);
 
-      // ---------------- SEND REQUEST ----------------
-      final response = await request.send();
-      final resp = await response.stream.bytesToString();
-      Get.back();
-
-      print("REGISTER RESPONSE: $resp");
-
-      final data = jsonDecode(resp);
-
-      if (response.statusCode == 201 && data["success"] == true) {
-        Get.snackbar("Success", data["message"],
-            backgroundColor: Colors.green, colorText: Colors.white);
-
-        Future.delayed(const Duration(milliseconds: 500), () {
-          Get.back();
-        });
-      } else {
-        Get.snackbar("Failed", data["message"],
-            backgroundColor: Colors.red, colorText: Colors.white);
-      }
-    } catch (e) {
-      Get.back();
-      Get.snackbar("Error", e.toString(),
+    if (response.statusCode == 201 && data["success"] == true) {
+      Get.snackbar("Success", data["message"],
+          backgroundColor: Colors.green, colorText: Colors.white);
+    } else {
+      Get.snackbar("Failed", data["message"],
           backgroundColor: Colors.red, colorText: Colors.white);
     }
+
+  } catch (e) {
+    Get.back();
+    Get.snackbar("Error", e.toString(),
+        backgroundColor: Colors.red, colorText: Colors.white);
   }
+}
+
+
 
   // ----------------------------------------------------
   // LOGIN
@@ -452,25 +411,8 @@ Future<Map<String, dynamic>?> getOrderCount() async {
   }
 }
 
-// ----------------------------------------------------------------------
-// ⭐ ASSIGNED ORDER
-// ----------------------------------------------------------------------
-Future<Map<String, dynamic>?> getAssignedOrder() async {
-  try {
-    String token = await SharedPre.getAccessToken();
 
-    final response = await http.get(
-      Uri.parse(ApiEndpoint.getUrl(ApiEndpoint.assignedOrder)),
-      headers: {"Authorization": "Bearer $token"},
-    );
 
-    print("ASSIGNED ORDER RESPONSE: ${response.body}");
-    return jsonDecode(response.body);
-  } catch (e) {
-    print("ASSIGNED ORDER ERROR: $e");
-    return null;
-  }
-}
 
 
 // -----------------------------------------------------------
@@ -519,6 +461,93 @@ Future<Map<String, dynamic>?> saveBankDetails({
   } catch (e) {
     print("BANK DETAILS API ERROR => $e");
     return {"success": false, "message": "Something went wrong"};
+  }
+}
+
+
+
+
+// -----------------------------------------------------------
+// ⭐ START DELIVERY (PICKUP API) — FIXED VERSION
+// -----------------------------------------------------------
+Future<Map<String, dynamic>?> startDelivery(String orderId) async {
+  try {
+    String token = await SharedPre.getAccessToken();
+
+    final url = ApiEndpoint.getUrl(ApiEndpoint.startDelivery(orderId));
+
+    print("📌 START DELIVERY PATCH URL = $url");
+
+    final response = await http.patch(
+      Uri.parse(url),   // ⭐ FIXED
+      headers: {
+        "Authorization": "Bearer $token",
+        "Content-Type": "application/json",
+      },
+      body: jsonEncode({
+        "note": "Picked up from restaurant",
+      }),
+    );
+
+    print("📌 START DELIVERY API RESPONSE = ${response.body}");
+
+    return jsonDecode(response.body);
+
+  } catch (e) {
+    print("❌ START DELIVERY PATCH ERROR → $e");
+    return null;
+  }
+}
+
+
+
+ // delivery
+
+Future<Map<String, dynamic>?> verifyDeliveryOtp(String orderId, String otp) async {
+  final url = ApiEndpoint.getUrl(ApiEndpoint.verifyOtp(orderId));
+
+  print("📌 VERIFY OTP PATCH URL → $url");
+
+  try {
+    final response = await http.patch(
+      Uri.parse(url),  // ⭐ FIXED
+      headers: {
+        "Authorization": "Bearer ${await SharedPre.getAccessToken()}",
+        "Content-Type": "application/json"
+      },
+      body: jsonEncode({
+        "otp": otp
+      }),
+    );
+
+    print("📌 VERIFY OTP RESPONSE → ${response.body}");
+
+    return jsonDecode(response.body);
+
+  } catch (e) {
+    print("❌ VERIFY OTP ERROR = $e");
+    return null;
+  }
+}
+
+
+
+Future<String?> uploadToCloudinary(File file) async {
+  try {
+    final url = Uri.parse("https://api.cloudinary.com/v1_1/dp8jfjx7c/image/upload");
+
+    final request = http.MultipartRequest("POST", url)
+      ..fields["upload_preset"] = "ml_default"
+      ..files.add(await http.MultipartFile.fromPath("file", file.path));
+
+    final res = await request.send();
+    final response = await res.stream.bytesToString();
+    final data = jsonDecode(response);
+
+    return data["secure_url"];
+  } catch (e) {
+    print("CLOUDINARY ERROR: $e");
+    return null;
   }
 }
 
