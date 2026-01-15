@@ -6,7 +6,6 @@ import 'package:restro_deliveryapp/Auth/controller/Authcontroller.dart';
 import 'package:restro_deliveryapp/Auth/model/authmodel.dart';
 import 'package:restro_deliveryapp/Auth/view/Editprofile.dart';
 import 'package:restro_deliveryapp/Auth/view/Login.dart';
-import 'package:restro_deliveryapp/Auth/view/SettingsScreen';
 import 'package:restro_deliveryapp/Homeview/View/Homveiw.dart';
 import 'package:restro_deliveryapp/utils/SharedPref.dart';
 
@@ -562,10 +561,10 @@ class _DeliveryProfileScreenState extends State<DeliveryProfileScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 22),
               child: Column(
                 children: [
-                  _profileOption(
-                      title: "Settings",
-                      icon: Icons.settings_outlined,
-                      onTap: () => Get.to(() => const DeliverySettingsScreen())),
+                  // _profileOption(
+                  //     title: "Settings",
+                  //     icon: Icons.settings_outlined,
+                  //     onTap: () => Get.to(() => const DeliverySettingsScreen())),
 
                   const SizedBox(height: 12),
 

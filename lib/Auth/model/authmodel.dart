@@ -453,3 +453,80 @@ class Restaurant {
     );
   }
 }
+
+
+// order picked model class 
+
+class PickupOrderResponse {
+  bool? success;
+  String? message;
+  PickupData? data;
+
+  PickupOrderResponse({this.success, this.message, this.data});
+
+  factory PickupOrderResponse.fromJson(Map<String, dynamic> json) {
+    return PickupOrderResponse(
+      success: json['success'],
+      message: json['message'],
+      data: json['data'] != null ? PickupData.fromJson(json['data']) : null,
+    );
+  }
+}
+
+class PickupData {
+  String? orderId;
+  String? currentStatus;
+  String? pickedUpAt;
+  List<PickupTimeline>? timeline;
+
+  // Fallback fields (merged from assigned order)
+  Map<String, dynamic>? customer;
+  Map<String, dynamic>? deliveryAddress;
+  List<dynamic>? items;
+  dynamic totalAmount;
+
+  PickupData({
+    this.orderId,
+    this.currentStatus,
+    this.pickedUpAt,
+    this.timeline,
+    this.customer,
+    this.deliveryAddress,
+    this.items,
+    this.totalAmount,
+  });
+
+  factory PickupData.fromJson(Map<String, dynamic> json) {
+    return PickupData(
+      orderId: json["orderId"] ?? json["order"]?["orderId"],
+      currentStatus: json["currentStatus"],
+      pickedUpAt: json["pickedUpAt"],
+
+      timeline: json["timeline"] == null
+          ? []
+          : (json["timeline"] as List)
+              .map((e) => PickupTimeline.fromJson(e))
+              .toList(),
+
+      // These come from PickupScreen merge
+      customer: json["customer"],
+      deliveryAddress: json["deliveryAddress"],
+      items: json["items"],
+      totalAmount: json["totalAmount"] ?? json["order"]?["total"],
+    );
+  }
+}
+
+class PickupTimeline {
+  String? at;
+  String? status;
+
+  PickupTimeline({this.at, this.status});
+
+  factory PickupTimeline.fromJson(Map<String, dynamic> json) {
+    return PickupTimeline(
+      at: json["at"]?.toString(),
+      status: json["status"],
+    );
+  }
+}

@@ -238,7 +238,7 @@ Future<DeliveryPartnerProfile?> getProfile() async {
       },
     );
 
-    if (res.statusCode == 200) {
+    if (res.statusCode == 200 || res.statusCode == 201) {
       var body = jsonDecode(res.body);
       return DeliveryPartnerProfile.fromJson(body);
     } else {
@@ -467,68 +467,38 @@ Future<Map<String, dynamic>?> saveBankDetails({
 
 
 
-// -----------------------------------------------------------
-// ⭐ START DELIVERY (PICKUP API) — FIXED VERSION
-// -----------------------------------------------------------
-Future<Map<String, dynamic>?> startDelivery(String orderId) async {
-  try {
-    String token = await SharedPre.getAccessToken();
 
-    final url = ApiEndpoint.getUrl(ApiEndpoint.startDelivery(orderId));
-
-    print("📌 START DELIVERY PATCH URL = $url");
-
-    final response = await http.patch(
-      Uri.parse(url),   // ⭐ FIXED
-      headers: {
-        "Authorization": "Bearer $token",
-        "Content-Type": "application/json",
-      },
-      body: jsonEncode({
-        "note": "Picked up from restaurant",
-      }),
-    );
-
-    print("📌 START DELIVERY API RESPONSE = ${response.body}");
-
-    return jsonDecode(response.body);
-
-  } catch (e) {
-    print("❌ START DELIVERY PATCH ERROR → $e");
-    return null;
-  }
-}
 
 
 
  // delivery
 
-Future<Map<String, dynamic>?> verifyDeliveryOtp(String orderId, String otp) async {
-  final url = ApiEndpoint.getUrl(ApiEndpoint.verifyOtp(orderId));
+// Future<Map<String, dynamic>?> verifyDeliveryOtp(String orderId, String otp) async {
+//   final url = ApiEndpoint.getUrl(ApiEndpoint.verifyOtp(orderId));
 
-  print("📌 VERIFY OTP PATCH URL → $url");
+//   print("📌 VERIFY OTP PATCH URL → $url");
 
-  try {
-    final response = await http.patch(
-      Uri.parse(url),  // ⭐ FIXED
-      headers: {
-        "Authorization": "Bearer ${await SharedPre.getAccessToken()}",
-        "Content-Type": "application/json"
-      },
-      body: jsonEncode({
-        "otp": otp
-      }),
-    );
+//   try {
+//     final response = await http.patch(
+//       Uri.parse(url),  // ⭐ FIXED
+//       headers: {
+//         "Authorization": "Bearer ${await SharedPre.getAccessToken()}",
+//         "Content-Type": "application/json"
+//       },
+//       body: jsonEncode({
+//         "otp": otp
+//       }),
+//     );
 
-    print("📌 VERIFY OTP RESPONSE → ${response.body}");
+//     print("📌 VERIFY OTP RESPONSE → ${response.body}");
 
-    return jsonDecode(response.body);
+//     return jsonDecode(response.body);
 
-  } catch (e) {
-    print("❌ VERIFY OTP ERROR = $e");
-    return null;
-  }
-}
+//   } catch (e) {
+//     print("❌ VERIFY OTP ERROR = $e");
+//     return null;
+//   }
+// }
 
 
 
@@ -551,6 +521,61 @@ Future<String?> uploadToCloudinary(File file) async {
   }
 }
 
+// ⭐ START DELIVERY   METHOD
+
+
+Future<PickupOrderResponse?> Pickuporder(String orderId) async {
+
+  try {
+    String token = await SharedPre.getAccessToken();
+
+    final String url =
+        "https://resto-grandma.onrender.com/api/v1/delivery/pick-order/$orderId";
+
+        debugPrint("PICKUP ORDER URL → $url");
+
+    final response = await http.patch(
+      Uri.parse(url),
+      headers: {
+        "Authorization": "Bearer $token",
+        "Content-Type": "application/json",
+      },
+      body: jsonEncode({"note": "Picked up from restaurant"}),
+    );
+
+    final json = jsonDecode(response.body);
+
+    return PickupOrderResponse.fromJson(json);
+  } catch (e) {
+    print("PICKUP ERROR → $e");
+    return null;
+  }
+}
+
+
+// ----------------------------------------------------------------------
+// ⭐ ASSIGNED ORDER
+
+Future<Map<String, dynamic>?> getAssignedOrderFromApi() async {
+  try {
+    String token = await SharedPre.getAccessToken();
+
+    final response = await http.get(
+      Uri.parse("https://resto-grandma.onrender.com/api/v1/delivery/assigned-order"),
+      headers: {"Authorization": "Bearer $token"},
+    );
+
+    print("ASSIGNED ORDER API RESPONSE: ${response.body}");
+
+    if (response.statusCode == 200) {
+      final json = jsonDecode(response.body);
+      return json["data"];   // return actual assigned order
+    }
+  } catch (e) {
+    print("ASSIGNED ORDER API ERROR: $e");
+  }
+  return null;
+}
 
 
 }
