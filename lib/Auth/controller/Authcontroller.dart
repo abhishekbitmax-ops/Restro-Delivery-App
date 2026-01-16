@@ -473,32 +473,31 @@ Future<Map<String, dynamic>?> saveBankDetails({
 
  // delivery
 
-// Future<Map<String, dynamic>?> verifyDeliveryOtp(String orderId, String otp) async {
-//   final url = ApiEndpoint.getUrl(ApiEndpoint.verifyOtp(orderId));
+Future<Map<String, dynamic>?> verifyDeliveryOtp(String orderId, String otp) async {
+  final String url = "https://sog.bitmaxtest.com/api/v1/delivery/$orderId/verify-otp";
 
-//   print("📌 VERIFY OTP PATCH URL → $url");
+  print("📌 VERIFY OTP PATCH URL → $url");
 
-//   try {
-//     final response = await http.patch(
-//       Uri.parse(url),  // ⭐ FIXED
-//       headers: {
-//         "Authorization": "Bearer ${await SharedPre.getAccessToken()}",
-//         "Content-Type": "application/json"
-//       },
-//       body: jsonEncode({
-//         "otp": otp
-//       }),
-//     );
+  try {
+    final token = await SharedPre.getAccessToken();
 
-//     print("📌 VERIFY OTP RESPONSE → ${response.body}");
+    final response = await http.patch(
+      Uri.parse(url),
+      headers: {
+        "Authorization": "Bearer $token",
+        "Content-Type": "application/json",
+      },
+      body: jsonEncode({"otp": otp}),
+    );
 
-//     return jsonDecode(response.body);
+    print("📌 VERIFY OTP RESPONSE → ${response.body}");
+    return jsonDecode(response.body);
 
-//   } catch (e) {
-//     print("❌ VERIFY OTP ERROR = $e");
-//     return null;
-//   }
-// }
+  } catch (e) {
+    print("❌ VERIFY OTP ERROR = $e");
+    return null;
+  }
+}
 
 
 
@@ -530,7 +529,7 @@ Future<PickupOrderResponse?> Pickuporder(String orderId) async {
     String token = await SharedPre.getAccessToken();
 
     final String url =
-        "https://resto-grandma.onrender.com/api/v1/delivery/pick-order/$orderId";
+        "https://sog.bitmaxtest.com/api/v1/delivery/pick-order/$orderId";
 
         debugPrint("PICKUP ORDER URL → $url");
 
@@ -561,7 +560,7 @@ Future<Map<String, dynamic>?> getAssignedOrderFromApi() async {
     String token = await SharedPre.getAccessToken();
 
     final response = await http.get(
-      Uri.parse("https://resto-grandma.onrender.com/api/v1/delivery/assigned-order"),
+      Uri.parse("https://sog.bitmaxtest.com/api/v1/delivery/assigned-order"),
       headers: {"Authorization": "Bearer $token"},
     );
 

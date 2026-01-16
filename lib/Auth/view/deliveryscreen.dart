@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:restro_deliveryapp/Auth/controller/Authcontroller.dart';
 import 'package:restro_deliveryapp/Auth/model/authmodel.dart';
+import 'package:restro_deliveryapp/Auth/view/Deliveysuccess.dart';
 
 class DeliveryScreen extends StatefulWidget {
   final PickupData orderData;
@@ -309,7 +310,8 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
           minimumSize: const Size(double.infinity, 50),
           backgroundColor: const Color(0xFF8B0000),
         ),
-        onPressed: isOtpValid ? () => _verifyOtp(orderId) : null,
+       onPressed: isOtpValid ? () => _verifyOtp(orderId) : null,
+
         child: Text("Complete Delivery",
             style: GoogleFonts.poppins(
                 color: Colors.white, fontWeight: FontWeight.w600)),
@@ -318,16 +320,37 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
   }
 
   // ---------------- VERIFY OTP ----------------
-  Future<void> _verifyOtp(String orderId) async {
-    final otp = _getOtp();
+ Future<void> _verifyOtp(String orderId) async {
+  final otp = _getOtp();
 
-    Get.dialog(const Center(child: CircularProgressIndicator()),
-        barrierDismissible: false);
+  Get.dialog(const Center(child: CircularProgressIndicator()),
+      barrierDismissible: false);
 
-    // Call your OTP API here
+  final result = await auth.verifyDeliveryOtp(orderId, otp);
 
-    Get.back();
+  Get.back(); // Close loader
+
+  if (result == null) {
+    Get.snackbar("Error", "Something went wrong!",
+        backgroundColor: Colors.red, colorText: Colors.white);
+    return;
   }
+
+ if (result["success"] == true) {
+  Get.snackbar("Success", result["message"] ?? "Delivery Completed!",
+      backgroundColor: Colors.green, colorText: Colors.white);
+
+  await Future.delayed(const Duration(seconds: 1));
+
+  // 👉 Navigate to Success Screen
+  Get.off(() => DeliverySuccessScreen(orderId: orderId));
+}
+else {
+    Get.snackbar("Invalid OTP", result["message"] ?? "Please enter correct OTP",
+        backgroundColor: Colors.red, colorText: Colors.white);
+  }
+}
+
 
   // ---------------- UI HELPERS ----------------
   Widget _cardContainer({required Widget child}) {
