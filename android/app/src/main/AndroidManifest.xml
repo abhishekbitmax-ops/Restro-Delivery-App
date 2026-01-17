@@ -3,6 +3,23 @@
 
 <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
 <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+  <!-- 🌐 Internet (API calls, Maps, Backend) -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+   
+
+    <!-- 📍 Background location (for delivery tracking when app is in background) -->
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+
+    <!-- 🔔 Foreground service (mandatory for background location on Android 10+) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+
+    <!-- 📡 Network state (optional but recommended) -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- 📳 Vibration (notifications / alerts) -->
+    <uses-permission android:name="android.permission.VIBRATE" />
 
     <application
         android:label="restro_deliveryapp"

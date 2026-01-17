@@ -474,7 +474,7 @@ Future<Map<String, dynamic>?> saveBankDetails({
  // delivery
 
 Future<Map<String, dynamic>?> verifyDeliveryOtp(String orderId, String otp) async {
-  final String url = "https://sog.bitmaxtest.com/api/v1/delivery/$orderId/verify-otp";
+  final String url = "https://resto-grandma.onrender.com/api/v1/delivery/$orderId/verify-otp";
 
   print("📌 VERIFY OTP PATCH URL → $url");
 
@@ -503,7 +503,7 @@ Future<Map<String, dynamic>?> verifyDeliveryOtp(String orderId, String otp) asyn
 
 Future<String?> uploadToCloudinary(File file) async {
   try {
-    final url = Uri.parse("https://api.cloudinary.com/v1_1/dp8jfjx7c/image/upload");
+    final url = Uri.parse("https://resto-grandma.onrender.com/v1_1/dp8jfjx7c/image/upload");
 
     final request = http.MultipartRequest("POST", url)
       ..fields["upload_preset"] = "ml_default"
@@ -529,7 +529,8 @@ Future<PickupOrderResponse?> Pickuporder(String orderId) async {
     String token = await SharedPre.getAccessToken();
 
     final String url =
-        "https://sog.bitmaxtest.com/api/v1/delivery/pick-order/$orderId";
+        "https://resto-grandma.onrender.com/api/v1/delivery/pick-order/$orderId";
+
 
         debugPrint("PICKUP ORDER URL → $url");
 
@@ -560,7 +561,7 @@ Future<Map<String, dynamic>?> getAssignedOrderFromApi() async {
     String token = await SharedPre.getAccessToken();
 
     final response = await http.get(
-      Uri.parse("https://sog.bitmaxtest.com/api/v1/delivery/assigned-order"),
+      Uri.parse("https://resto-grandma.onrender.com/api/v1/delivery/assigned-order"),
       headers: {"Authorization": "Bearer $token"},
     );
 

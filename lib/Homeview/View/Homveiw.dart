@@ -52,7 +52,7 @@ class _DeliveryDashboardScreenState extends State<DeliveryDashboardScreen> {
     String? token = await SharedPre.getAccessToken();
 
     orderSocket = IO.io(
-      "http://192.168.1.108:5004/orders",
+      "https://resto-grandma.onrender.com/orders",
       IO.OptionBuilder()
           .setTransports(['websocket'])
           .enableForceNew()
