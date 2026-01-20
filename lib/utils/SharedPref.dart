@@ -111,6 +111,8 @@ class SharedPre {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(KEY_ASSIGNED_ORDER);
   }
+  
+
 
   // -------------------- CLEAR ALL (LOGOUT) --------------------
   static Future<void> clearAll() async {

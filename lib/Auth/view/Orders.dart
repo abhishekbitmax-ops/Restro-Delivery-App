@@ -2,31 +2,48 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:restro_deliveryapp/Auth/controller/Authcontroller.dart';
 import 'package:restro_deliveryapp/Auth/view/order_details_screen.dart';
 
 class MyOrdersScreen extends StatefulWidget {
-  final List<dynamic> activeOrders;
-  final List<dynamic> completedOrders;
   final int defaultTab; // 0 = active, 1 = completed
 
-  const MyOrdersScreen({
-    super.key,
-    required this.activeOrders,
-    required this.completedOrders,
-    this.defaultTab = 0,
-  });
+  const MyOrdersScreen({super.key, this.defaultTab = 0});
 
   @override
   State<MyOrdersScreen> createState() => _MyOrdersScreenState();
 }
 
 class _MyOrdersScreenState extends State<MyOrdersScreen> {
+  final AuthController auth = Get.find<AuthController>();
+
   int selectedTab = 0;
+  bool isLoading = true;
+
+  List<dynamic> activeOrders = [];
+  List<dynamic> completedOrders = [];
 
   @override
   void initState() {
     super.initState();
-    selectedTab = widget.defaultTab; // 🔥 load correct tab
+    selectedTab = widget.defaultTab;
+    loadOrders();
+  }
+
+  // 🔥 LOAD ORDERS FROM API
+  Future<void> loadOrders() async {
+    setState(() => isLoading = true);
+
+    final active = await auth.getActiveOrder();
+    final completed = await auth.getCompletedOrder();
+
+    if (!mounted) return;
+
+    setState(() {
+      activeOrders = active?["data"] ?? [];
+      completedOrders = completed?["data"] ?? [];
+      isLoading = false;
+    });
   }
 
   @override
@@ -52,23 +69,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
             ),
             child: Row(
               children: [
-                Container(
-                  height: 42,
-                  width: 42,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(6),
-                    child: ClipOval(
-                      child: Image.asset(
-                        'assets/images/restro_logo.jpg',
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
-                ),
+                const Icon(Icons.list_alt, color: Colors.white),
                 const SizedBox(width: 12),
                 Text(
                   "My Orders",
@@ -78,14 +79,13 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                     color: Colors.white,
                   ),
                 ),
-                const Spacer(),
               ],
             ),
           ),
 
           const SizedBox(height: 20),
 
-          // ⭐ UPDATED TABS (Active + Completed)
+          // ⭐ TABS
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Container(
@@ -106,18 +106,23 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
 
           const SizedBox(height: 20),
 
-          // 📦 LIST VIEW
+          // 📦 LIST
           Expanded(
-            child: selectedTab == 0
-                ? _buildOrderList(widget.activeOrders)      // Only ACTIVE
-                : _buildOrderList(widget.completedOrders),  // Only COMPLETED
+            child: isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : RefreshIndicator(
+                    onRefresh: loadOrders,
+                    child: selectedTab == 0
+                        ? _buildOrderList(activeOrders)
+                        : _buildOrderList(completedOrders),
+                  ),
           ),
         ],
       ),
     );
   }
 
-  // 🔘 TAB BUTTON UI
+  // 🔘 TAB BUTTON
   Widget _tabButton(String label, int index) {
     final active = selectedTab == index;
 
@@ -155,6 +160,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
     if (orders.isEmpty) return _emptyState();
 
     return ListView.builder(
+      physics: const AlwaysScrollableScrollPhysics(),
       itemCount: orders.length,
       itemBuilder: (context, index) => _orderCard(orders[index]),
     );
@@ -205,53 +211,26 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
             ),
             const SizedBox(height: 12),
 
-            Row(
-              children: [
-                const Icon(Icons.store, size: 18),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    restaurant["name"] ?? "Restaurant",
-                    style: GoogleFonts.poppins(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
+            Text(
+              restaurant["name"] ?? "Restaurant",
+              style: GoogleFonts.poppins(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+              ),
             ),
 
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
 
-            Row(
-              children: [
-                const Icon(Icons.location_on, size: 16, color: Colors.redAccent),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    "${address["addressLine"] ?? "-"}, "
-                    "${address["city"] ?? ""} - "
-                    "${address["pincode"] ?? ""}",
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      color: Colors.black54,
-                    ),
-                  ),
-                ),
-              ],
+            Text(
+              "${address["addressLine"] ?? "-"}, ${address["city"] ?? ""}",
+              style: GoogleFonts.poppins(fontSize: 12, color: Colors.black54),
             ),
 
             const SizedBox(height: 10),
 
             Row(
               children: [
-                Text(
-                  "${items.length} items",
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+                Text("${items.length} items"),
                 const Spacer(),
                 Text(
                   "₹$total",
@@ -318,10 +297,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
           const SizedBox(height: 14),
           Text(
             "No orders found",
-            style: GoogleFonts.poppins(
-              fontSize: 14,
-              color: Colors.black54,
-            ),
+            style: GoogleFonts.poppins(fontSize: 14, color: Colors.black54),
           ),
         ],
       ),

@@ -19,8 +19,8 @@ class _BottomNavBarState extends State<BottomNavBar> {
 
   final screens = [
     const DeliveryDashboardScreen(),
-    const MyOrdersScreen(activeOrders: [], completedOrders: [],),
-    const DeliveryEarningsScreen(),
+    const MyOrdersScreen(),
+    // const DeliveryEarningsScreen(),
     DeliveryProfileScreen(),
   ];
 
@@ -64,21 +64,17 @@ class _BottomNavBarState extends State<BottomNavBar> {
               fontWeight: FontWeight.w600,
               fontSize: 11,
             ),
-            unselectedLabelStyle:
-                GoogleFonts.poppins(fontSize: 10),
+            unselectedLabelStyle: GoogleFonts.poppins(fontSize: 10),
             items: const [
-              BottomNavigationBarItem(
-                icon: Icon(Icons.home),
-                label: "Home",
-              ),
+              BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
               BottomNavigationBarItem(
                 icon: Icon(Icons.list_alt),
                 label: "Orders",
               ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.currency_rupee),
-                label: "Earnings",
-              ),
+              // BottomNavigationBarItem(
+              //   icon: Icon(Icons.currency_rupee),
+              //   label: "Earnings",
+              // ),
               BottomNavigationBarItem(
                 icon: Icon(Icons.person),
                 label: "Profile",

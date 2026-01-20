@@ -2,9 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:location/location.dart';
+import 'dart:math';
+
 import 'package:restro_deliveryapp/Auth/controller/Authcontroller.dart';
 import 'package:restro_deliveryapp/Auth/model/authmodel.dart';
 import 'package:restro_deliveryapp/Auth/view/Deliveysuccess.dart';
+import 'package:restro_deliveryapp/utils/SharedPref.dart';
 
 class DeliveryScreen extends StatefulWidget {
   final PickupData orderData;
@@ -16,11 +22,15 @@ class DeliveryScreen extends StatefulWidget {
 }
 
 class _DeliveryScreenState extends State<DeliveryScreen> {
-  final List<TextEditingController> _otpControllers =
-      List.generate(4, (_) => TextEditingController());
+  final List<TextEditingController> _otpControllers = List.generate(
+    4,
+    (_) => TextEditingController(),
+  );
   final List<FocusNode> _focusNodes = List.generate(4, (_) => FocusNode());
 
   final AuthController auth = Get.put(AuthController());
+  LocationData? _currentLocation;
+  double? _distanceInKm;
   bool isOtpValid = false;
 
   void _checkOtp() {
@@ -35,16 +45,10 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
   Widget build(BuildContext context) {
     final data = widget.orderData;
 
-    /// -----------------------------
-    /// 🔥 USE API DATA FIRST
-    /// -----------------------------
     final orderId = data.orderId ?? "N/A";
     final status = data.currentStatus ?? "-";
     final pickedAt = data.pickedUpAt ?? "-";
 
-    /// -----------------------------
-    /// 🔥 MERGED DATA FROM PickupScreen
-    /// -----------------------------
     final customer = data.customer ?? {};
     final address = data.deliveryAddress ?? {};
     final items = data.items ?? [];
@@ -65,6 +69,9 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
                   const SizedBox(height: 20),
 
                   _customerCard(customer, address),
+                  const SizedBox(height: 16),
+
+                  _trackMapButton(address), // ⭐ MAP BUTTON
                   const SizedBox(height: 20),
 
                   _itemsCard(items),
@@ -81,7 +88,6 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
               ),
             ),
           ),
-
           _bottomButtons(orderId),
         ],
       ),
@@ -101,22 +107,22 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               InkWell(
-                  onTap: () => Get.back(),
-                  child: const Icon(Icons.arrow_back, color: Colors.white)),
+                onTap: () => Get.back(),
+                child: const Icon(Icons.arrow_back, color: Colors.white),
+              ),
               Text(
                 "Order ID: $orderId",
                 style: GoogleFonts.poppins(fontSize: 12, color: Colors.white70),
               ),
             ],
           ),
-
           CircleAvatar(
             radius: 28,
             backgroundColor: Colors.white,
             child: ClipOval(
               child: Image.asset("assets/images/restro_logo.jpg"),
             ),
-          )
+          ),
         ],
       ),
     );
@@ -141,9 +147,13 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         children: [
-          Text("$title: ",
-              style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.w600, fontSize: 14)),
+          Text(
+            "$title: ",
+            style: GoogleFonts.poppins(
+              fontWeight: FontWeight.w600,
+              fontSize: 14,
+            ),
+          ),
           Expanded(child: Text(value, style: GoogleFonts.poppins())),
         ],
       ),
@@ -156,35 +166,193 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text("Customer Details",
-              style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.w700, fontSize: 15)),
+          Text(
+            "Customer Details",
+            style: GoogleFonts.poppins(
+              fontWeight: FontWeight.w700,
+              fontSize: 15,
+            ),
+          ),
           const SizedBox(height: 12),
-
           _infoRow("Name", customer["name"] ?? "-"),
           _infoRow("Phone", customer["phone"] ?? "-"),
           _infoRow(
             "Address",
             "${address["addressLine"] ?? ''}, "
-            "${address["city"] ?? ''} - "
-            "${address["pincode"] ?? ''}",
+                "${address["city"] ?? ''} - "
+                "${address["pincode"] ?? ''}",
           ),
         ],
       ),
     );
   }
 
-  // ---------------- ITEMS CARD ----------------
+  // ---------------- MAP BUTTON ----------------
+  Widget _trackMapButton(Map address) {
+    if (address["lat"] == null || address["lng"] == null) {
+      return const SizedBox();
+    }
+
+    return _cardContainer(
+      child: ElevatedButton.icon(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF8B0000),
+          minimumSize: const Size(double.infinity, 48),
+        ),
+        icon: const Icon(Icons.map, color: Colors.white),
+        label: Text(
+          "Track on Map",
+          style: GoogleFonts.poppins(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        onPressed: () => _openMapBottomSheet(address),
+      ),
+    );
+  }
+
+  // ---------------- MAP BOTTOM SHEET ----------------
+  void _openMapBottomSheet(Map address) async {
+    final double destLat = address["lat"];
+    final double destLng = address["lng"];
+
+    await _getCurrentLocation(destLat, destLng);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.9,
+          minChildSize: 0.6,
+          maxChildSize: 0.95,
+          builder: (_, controller) {
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Column(
+                children: [
+                  // Drag handle
+                  Container(
+                    width: 40,
+                    height: 5,
+                    margin: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+
+                  // Distance chip
+                  if (_distanceInKm != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Chip(
+                        label: Text(
+                          "Distance: ${_distanceInKm!.toStringAsFixed(2)} km",
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        backgroundColor: Colors.green.shade100,
+                      ),
+                    ),
+
+                  Expanded(
+                    child: GoogleMap(
+                      initialCameraPosition: CameraPosition(
+                        target: LatLng(destLat, destLng),
+                        zoom: 14,
+                      ),
+                      myLocationEnabled: true,
+                      myLocationButtonEnabled: true,
+                      markers: {
+                        // Delivery location
+                        Marker(
+                          markerId: const MarkerId("delivery"),
+                          position: LatLng(destLat, destLng),
+                          icon: BitmapDescriptor.defaultMarkerWithHue(
+                            BitmapDescriptor.hueRed,
+                          ),
+                          infoWindow: const InfoWindow(
+                            title: "Delivery Address",
+                          ),
+                        ),
+
+                        // Driver location
+                        if (_currentLocation != null)
+                          Marker(
+                            markerId: const MarkerId("driver"),
+                            position: LatLng(
+                              _currentLocation!.latitude!,
+                              _currentLocation!.longitude!,
+                            ),
+                            icon: BitmapDescriptor.defaultMarkerWithHue(
+                              BitmapDescriptor.hueBlue,
+                            ),
+                            infoWindow: const InfoWindow(
+                              title: "Your Location",
+                            ),
+                          ),
+                      },
+                    ),
+                  ),
+
+                  Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        minimumSize: const Size(double.infinity, 48),
+                      ),
+                      icon: const Icon(Icons.navigation, color: Colors.white),
+                      label: Text(
+                        "Open in Google Maps",
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      onPressed: () => _launchGoogleMaps(destLat, destLng),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _launchGoogleMaps(double lat, double lng) async {
+    final uri = Uri.parse(
+      "https://www.google.com/maps/dir/?api=1&destination=$lat,$lng&travelmode=driving",
+    );
+
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  // ---------------- ITEMS ----------------
   Widget _itemsCard(List items) {
     return _cardContainer(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text("Items",
-              style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.w700, fontSize: 15)),
+          Text(
+            "Items",
+            style: GoogleFonts.poppins(
+              fontWeight: FontWeight.w700,
+              fontSize: 15,
+            ),
+          ),
           const SizedBox(height: 12),
-
           ...items.map(
             (item) => Padding(
               padding: const EdgeInsets.symmetric(vertical: 6),
@@ -197,26 +365,33 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
                 ],
               ),
             ),
-          )
+          ),
         ],
       ),
     );
   }
 
-  // ---------------- PAYMENT CARD ----------------
+  // ---------------- PAYMENT ----------------
   Widget _paymentCard(amount) {
     return _cardContainer(
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text("Grand Total",
-              style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.w600, fontSize: 15)),
-          Text("₹$amount",
-              style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 16,
-                  color: Colors.green)),
+          Text(
+            "Grand Total",
+            style: GoogleFonts.poppins(
+              fontWeight: FontWeight.w600,
+              fontSize: 15,
+            ),
+          ),
+          Text(
+            "₹$amount",
+            style: GoogleFonts.poppins(
+              fontWeight: FontWeight.w700,
+              fontSize: 16,
+              color: Colors.green,
+            ),
+          ),
         ],
       ),
     );
@@ -228,26 +403,26 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text("Order Timeline",
-              style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.w700, fontSize: 15)),
+          Text(
+            "Order Timeline",
+            style: GoogleFonts.poppins(
+              fontWeight: FontWeight.w700,
+              fontSize: 15,
+            ),
+          ),
           const SizedBox(height: 12),
-
-          if (order.timeline == null || order.timeline!.isEmpty)
-            Text("No timeline available",
-                style: GoogleFonts.poppins(color: Colors.black45)),
-
           ...?order.timeline?.map(
             (t) => Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: Row(
                 children: [
-                  const Icon(Icons.check_circle,
-                      size: 18, color: Colors.green),
+                  const Icon(Icons.check_circle, size: 18, color: Colors.green),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text("${t.status} (${t.at})",
-                        style: GoogleFonts.poppins(fontSize: 13)),
+                    child: Text(
+                      "${t.status} (${t.at})",
+                      style: GoogleFonts.poppins(fontSize: 13),
+                    ),
                   ),
                 ],
               ),
@@ -258,17 +433,20 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
     );
   }
 
-  // ---------------- OTP SECTION ----------------
+  // ---------------- OTP ----------------
   Widget _otpSection(String orderId) {
     return _cardContainer(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text("Enter Delivery OTP",
-              style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.w700, fontSize: 15)),
+          Text(
+            "Enter Delivery OTP",
+            style: GoogleFonts.poppins(
+              fontWeight: FontWeight.w700,
+              fontSize: 15,
+            ),
+          ),
           const SizedBox(height: 14),
-
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: List.generate(4, _otpBox),
@@ -287,22 +465,13 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
         keyboardType: TextInputType.number,
         maxLength: 1,
         textAlign: TextAlign.center,
-        style: const TextStyle(fontSize: 20),
         decoration: _inputDecoration(),
-        onChanged: (value) {
-          if (value.isNotEmpty && index < 3) {
-            _focusNodes[index + 1].requestFocus();
-          }
-          if (value.isEmpty && index > 0) {
-            _focusNodes[index - 1].requestFocus();
-          }
-          _checkOtp();
-        },
+        onChanged: (_) => _checkOtp(),
       ),
     );
   }
 
-  // ---------------- BOTTOM BUTTON ----------------
+  // ---------------- COMPLETE DELIVERY ----------------
   Widget _bottomButtons(String orderId) {
     return SafeArea(
       child: ElevatedButton(
@@ -310,47 +479,41 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
           minimumSize: const Size(double.infinity, 50),
           backgroundColor: const Color(0xFF8B0000),
         ),
-       onPressed: isOtpValid ? () => _verifyOtp(orderId) : null,
-
-        child: Text("Complete Delivery",
-            style: GoogleFonts.poppins(
-                color: Colors.white, fontWeight: FontWeight.w600)),
+        onPressed: isOtpValid ? () => _verifyOtp(orderId) : null,
+        child: Text(
+          "Complete Delivery",
+          style: GoogleFonts.poppins(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ),
     );
   }
 
-  // ---------------- VERIFY OTP ----------------
- Future<void> _verifyOtp(String orderId) async {
-  final otp = _getOtp();
+  Future<void> _verifyOtp(String orderId) async {
+    final otp = _getOtp();
 
-  Get.dialog(const Center(child: CircularProgressIndicator()),
-      barrierDismissible: false);
+    Get.dialog(
+      const Center(child: CircularProgressIndicator()),
+      barrierDismissible: false,
+    );
 
-  final result = await auth.verifyDeliveryOtp(orderId, otp);
+    final result = await auth.verifyDeliveryOtp(orderId, otp);
+    Get.back();
 
-  Get.back(); // Close loader
-
-  if (result == null) {
-    Get.snackbar("Error", "Something went wrong!",
-        backgroundColor: Colors.red, colorText: Colors.white);
-    return;
+    if (result?["success"] == true) {
+      await SharedPre.clearAssignedOrder();
+      Get.off(() => DeliverySuccessScreen(orderId: orderId));
+    } else {
+      Get.snackbar(
+        "Error",
+        "Invalid OTP",
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
   }
-
- if (result["success"] == true) {
-  Get.snackbar("Success", result["message"] ?? "Delivery Completed!",
-      backgroundColor: Colors.green, colorText: Colors.white);
-
-  await Future.delayed(const Duration(seconds: 1));
-
-  // 👉 Navigate to Success Screen
-  Get.off(() => DeliverySuccessScreen(orderId: orderId));
-}
-else {
-    Get.snackbar("Invalid OTP", result["message"] ?? "Please enter correct OTP",
-        backgroundColor: Colors.red, colorText: Colors.white);
-  }
-}
-
 
   // ---------------- UI HELPERS ----------------
   Widget _cardContainer({required Widget child}) {
@@ -361,10 +524,7 @@ else {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(
-            blurRadius: 10,
-            color: Colors.black12.withOpacity(0.1),
-          ),
+          BoxShadow(blurRadius: 10, color: Colors.black12.withOpacity(0.1)),
         ],
       ),
       child: child,
@@ -382,4 +542,56 @@ else {
       ),
     );
   }
+
+  Future<void> _getCurrentLocation(double destLat, double destLng) async {
+    final location = Location();
+
+    bool serviceEnabled = await location.serviceEnabled();
+    if (!serviceEnabled) {
+      serviceEnabled = await location.requestService();
+      if (!serviceEnabled) return;
+    }
+
+    PermissionStatus permission = await location.hasPermission();
+    if (permission == PermissionStatus.denied) {
+      permission = await location.requestPermission();
+      if (permission != PermissionStatus.granted) return;
+    }
+
+    final loc = await location.getLocation();
+
+    setState(() {
+      _currentLocation = loc;
+      _distanceInKm = _calculateDistance(
+        loc.latitude!,
+        loc.longitude!,
+        destLat,
+        destLng,
+      );
+    });
+  }
+
+  double _calculateDistance(
+    double lat1,
+    double lon1,
+    double lat2,
+    double lon2,
+  ) {
+    const double earthRadius = 6371; // KM
+
+    final dLat = _degToRad(lat2 - lat1);
+    final dLon = _degToRad(lon2 - lon1);
+
+    final a =
+        sin(dLat / 2) * sin(dLat / 2) +
+        cos(_degToRad(lat1)) *
+            cos(_degToRad(lat2)) *
+            sin(dLon / 2) *
+            sin(dLon / 2);
+
+    final c = 2 * atan2(sqrt(a), sqrt(1 - a));
+    return earthRadius * c;
+  }
+
+  double _degToRad(double deg) => deg * (pi / 180);
 }

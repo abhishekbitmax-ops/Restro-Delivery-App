@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'dart:async';
+
 import 'package:google_fonts/google_fonts.dart';
 import 'package:restro_deliveryapp/Auth/controller/Authcontroller.dart';
 import 'package:restro_deliveryapp/Auth/view/Orderpickup.dart';
 import 'package:restro_deliveryapp/Auth/view/Orders.dart';
-import 'package:restro_deliveryapp/utils/SharedPref.dart';
-import 'package:socket_io_client/socket_io_client.dart' as IO;
-import 'package:fluttertoast/fluttertoast.dart';
+import 'package:restro_deliveryapp/Auth/view/SocketService.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
 
 class DeliveryDashboardScreen extends StatefulWidget {
   const DeliveryDashboardScreen({super.key});
@@ -19,8 +20,14 @@ class DeliveryDashboardScreen extends StatefulWidget {
 }
 
 class _DeliveryDashboardScreenState extends State<DeliveryDashboardScreen> {
-  bool hasAssignedOrder = false;
+  final OrderSocketService socketService = Get.find<OrderSocketService>();
+
   bool isOnline = true;
+  Future<void> fetchAssignedOrderFromApi() async {
+    await auth.getAssignedOrderFromApi();
+  }
+
+  Timer? _assignedOrderTimer;
 
   bool isLoading = true; // ⭐ NEW — shimmer controller
 
@@ -30,72 +37,28 @@ class _DeliveryDashboardScreenState extends State<DeliveryDashboardScreen> {
 
   List<dynamic> activeOrdersData = [];
   List<dynamic> completedOrdersData = [];
+  Future<void> _onRefresh() async {
+    await loadOrderData();
+  }
 
   int activeOrders = 0;
   int completedOrders = 0;
   int orderCount = 0;
 
-  Map<String, dynamic>? assignedOrderData;
-
-  late IO.Socket orderSocket;
+  late FlutterRingtonePlayer ringtonePlayer;
 
   @override
   void initState() {
     super.initState();
+
     fetchUserName();
     loadOrderData();
-    connectOrderSocket();
-  }
 
-  // ⭐ CONNECT SOCKET.IO
-  void connectOrderSocket() async {
-    String? token = await SharedPre.getAccessToken();
+    // 🔥 immediate hit (first time)
+    fetchAssignedOrderFromApi();
 
-    orderSocket = IO.io(
-      "https://resto-grandma.onrender.com/orders",
-      IO.OptionBuilder()
-          .setTransports(['websocket'])
-          .enableForceNew()
-          .enableAutoConnect()
-          .setAuth({"token": token})
-          .build(),
-    );
-
-    orderSocket.onConnect((_) {
-      print("✔️ SOCKET CONNECTED TO ORDERS NAMESPACE");
-    });
-
-    orderSocket.on("CONNECTION_ESTABLISHED", (data) {
-      print("🔥 CONNECTION_ESTABLISHED: $data");
-    });
-
-    orderSocket.on("DELIVERY_ASSIGNED", (data) {
-      print("📦 NEW DELIVERY ASSIGNED: $data");
-
-      SharedPre.saveAssignedOrder(data["data"]);
-
-
-      setState(() {
-  hasAssignedOrder = true;
-  assignedOrderData = data["data"];
-});
-
-      Fluttertoast.showToast(
-        msg: "📦 New delivery assigned!",
-      );
-
-      Get.snackbar("New Order Assigned", "A new delivery has been assigned!",
-          backgroundColor: Colors.green, colorText: Colors.white);
-    });
-
-    orderSocket.on("ORDER_ASSIGNED_TO_PARTNER", (data) {
-      print("🔄 ORDER_ASSIGNED_SUCESSFULLY: $data");
-      loadOrderData();
-    });
-
-    orderSocket.onError((err) {
-      print("❌ SOCKET ERROR: $err");
-    });
+    // 🔁 silent polling every 5 seconds
+    startAssignedOrderPolling();
   }
 
   // ⭐ FETCH USERNAME
@@ -109,18 +72,15 @@ class _DeliveryDashboardScreenState extends State<DeliveryDashboardScreen> {
     }
   }
 
-  // ⭐ LOAD ORDER DATA + shimmer
-void loadOrderData() async {
-  setState(() => isLoading = true);
+  Future<void> loadOrderData() async {
+    setState(() => isLoading = true);
 
-  var active = await auth.getActiveOrder();
-  var completed = await auth.getCompletedOrder();
-  var count = await auth.getOrderCount();
+    final active = await auth.getActiveOrder();
+    final completed = await auth.getCompletedOrder();
+    final count = await auth.getOrderCount();
 
-  var backendAssigned = await auth.getAssignedOrderFromApi();
-  var localAssigned = backendAssigned ?? await SharedPre.getAssignedOrder();
+    if (!mounted) return;
 
-  if (mounted) {
     setState(() {
       activeOrdersData = active?["data"] ?? [];
       completedOrdersData = completed?["data"] ?? [];
@@ -129,24 +89,8 @@ void loadOrderData() async {
       completedOrders = completedOrdersData.length;
 
       orderCount = count?["data"]?["activeOrders"] ?? 0;
-
-      hasAssignedOrder = localAssigned != null;
-      assignedOrderData = localAssigned;
-
-      if (backendAssigned != null) {
-        SharedPre.saveAssignedOrder(backendAssigned);
-      }
-
       isLoading = false;
     });
-  }
-}
-
-
-  @override
-  void dispose() {
-    orderSocket.dispose();
-    super.dispose();
   }
 
   // ⭐ STATUS CARD WIDGET
@@ -197,16 +141,27 @@ void loadOrderData() async {
               const SizedBox(height: 6),
               Text(
                 title,
-                style: GoogleFonts.poppins(
-                  fontSize: 13,
-                  color: Colors.black54,
-                ),
+                style: GoogleFonts.poppins(fontSize: 13, color: Colors.black54),
               ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  void startAssignedOrderPolling() {
+    _assignedOrderTimer?.cancel();
+
+    _assignedOrderTimer = Timer.periodic(const Duration(seconds: 3), (_) async {
+      await auth.getAssignedOrderFromApi();
+    });
+  }
+
+  @override
+  void dispose() {
+    _assignedOrderTimer?.cancel();
+    super.dispose();
   }
 
   // ⭐ SHIMMER: HEADER
@@ -216,7 +171,11 @@ void loadOrderData() async {
       highlightColor: Colors.grey.shade200,
       child: Container(
         padding: EdgeInsets.only(
-            top: topPadding + 18, bottom: 28, left: 20, right: 20),
+          top: topPadding + 18,
+          bottom: 28,
+          left: 20,
+          right: 20,
+        ),
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [Color(0xFF7A0000), Color(0xFFB11212)],
@@ -234,7 +193,9 @@ void loadOrderData() async {
                   height: 52,
                   width: 52,
                   decoration: const BoxDecoration(
-                      color: Colors.white, shape: BoxShape.circle),
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                  ),
                 ),
                 const SizedBox(width: 14),
                 Column(
@@ -250,9 +211,10 @@ void loadOrderData() async {
                   height: 33,
                   width: 60,
                   decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20)),
-                )
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 24),
@@ -328,10 +290,26 @@ void loadOrderData() async {
       colorFilter: isOnline
           ? const ColorFilter.mode(Colors.transparent, BlendMode.dst)
           : const ColorFilter.matrix(<double>[
-              0.2126, 0.7152, 0.0722, 0, 0,
-              0.2126, 0.7152, 0.0722, 0, 0,
-              0.2126, 0.7152, 0.0722, 0, 0,
-              0, 0, 0, 1, 0,
+              0.2126,
+              0.7152,
+              0.0722,
+              0,
+              0,
+              0.2126,
+              0.7152,
+              0.0722,
+              0,
+              0,
+              0.2126,
+              0.7152,
+              0.0722,
+              0,
+              0,
+              0,
+              0,
+              0,
+              1,
+              0,
             ]),
       child: Scaffold(
         backgroundColor: const Color(0xFFF6F6F6),
@@ -434,15 +412,19 @@ void loadOrderData() async {
                                     isOnline = result["data"]["isOnline"];
                                   });
 
-                                  Get.snackbar("Status Updated",
-                                      result["message"],
-                                      backgroundColor: Colors.green,
-                                      colorText: Colors.white);
+                                  Get.snackbar(
+                                    "Status Updated",
+                                    result["message"],
+                                    backgroundColor: Colors.green,
+                                    colorText: Colors.white,
+                                  );
                                 } else {
-                                  Get.snackbar("Error",
-                                      "Unable to change status",
-                                      backgroundColor: Colors.red,
-                                      colorText: Colors.white);
+                                  Get.snackbar(
+                                    "Error",
+                                    "Unable to change status",
+                                    backgroundColor: Colors.red,
+                                    colorText: Colors.white,
+                                  );
                                 }
                               },
                               child: AnimatedContainer(
@@ -457,8 +439,7 @@ void loadOrderData() async {
                                       : const Color(0xFF3A3A3A),
                                 ),
                                 child: AnimatedAlign(
-                                  duration:
-                                      const Duration(milliseconds: 250),
+                                  duration: const Duration(milliseconds: 250),
                                   alignment: isOnline
                                       ? Alignment.centerRight
                                       : Alignment.centerLeft,
@@ -496,63 +477,56 @@ void loadOrderData() async {
 
                   /// ⭐ BODY
                   Expanded(
-                    child: SingleChildScrollView(
-                      padding:
-                          const EdgeInsets.fromLTRB(20, 32, 20, 40),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              _statusCard(
-                                title: "Active Orders",
-                                value: activeOrders.toString(),
-                                icon: Icons.delivery_dining_outlined,
-                                color: const Color(0xFF8B0000),
-                                onTap: () => Get.to(() => MyOrdersScreen(
-                                      activeOrders: activeOrdersData,
-                                      completedOrders:
-                                          completedOrdersData,
-                                      defaultTab: 0,
-                                    )),
-                              ),
-                              const SizedBox(width: 18),
-                              _statusCard(
-                                title: "Completed",
-                                value: completedOrders.toString(),
-                                icon: Icons.check_circle_outline,
-                                color: Colors.green,
-                                onTap: () => Get.to(() => MyOrdersScreen(
-                                      activeOrders: activeOrdersData,
-                                      completedOrders:
-                                          completedOrdersData,
-                                      defaultTab: 1,
-                                    )),
-                              ),
-                            ],
-                          ),
-
-                          const SizedBox(height: 42),
-
-                          Text(
-                            "Current Assignment",
-                            style: GoogleFonts.poppins(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
+                    child: RefreshIndicator(
+                      color: const Color(0xFF8B0000),
+                      onRefresh: _onRefresh,
+                      child: SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.fromLTRB(20, 32, 20, 40),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                _statusCard(
+                                  title: "Active Orders",
+                                  value: activeOrders.toString(),
+                                  icon: Icons.delivery_dining_outlined,
+                                  color: const Color(0xFF8B0000),
+                                  onTap: () => Get.to(
+                                    () => const MyOrdersScreen(defaultTab: 0),
+                                  ),
+                                ),
+                                const SizedBox(width: 18),
+                                _statusCard(
+                                  title: "Completed",
+                                  value: completedOrders.toString(),
+                                  icon: Icons.check_circle_outline,
+                                  color: Colors.green,
+                                  onTap: () => Get.to(
+                                    () => const MyOrdersScreen(defaultTab: 1),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
 
-                          const SizedBox(height: 18),
+                            const SizedBox(height: 42),
+                            Text(
+                              "Current Assignment",
+                              style: GoogleFonts.poppins(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
 
-                          hasAssignedOrder
-                              ? GestureDetector(
-                                  onTap: () => Get.to(() =>
-                                      PickupScreen(
-                                          orderData:
-                                              assignedOrderData!)),
-                                  child: _assignedOrderCardUI(),
-                                )
-                              : Center(
+                            const SizedBox(height: 18),
+
+                            /// ⭐ REAL-TIME ORDER UI
+                            Obx(() {
+                              final order = socketService.assignedOrder.value;
+
+                              if (order == null) {
+                                return Center(
                                   child: Text(
                                     "No Order Assigned",
                                     style: GoogleFonts.poppins(
@@ -560,140 +534,120 @@ void loadOrderData() async {
                                       color: Colors.black54,
                                     ),
                                   ),
+                                );
+                              }
+
+                              return GestureDetector(
+                                onTap: () => Get.to(
+                                  () => PickupScreen(orderData: order),
                                 ),
-                        ],
+                                child: _assignedOrderCardUI(order),
+                              );
+                            }),
+                          ],
+                        ),
                       ),
                     ),
-                  )
+                  ),
                 ],
               ),
       ),
     );
   }
 
-  // ⭐ FINAL ORDER ASSIGNED UI
-Widget _assignedOrderCardUI() {
-  final order = assignedOrderData ?? {};
-
-  return Container(
-    padding: const EdgeInsets.all(26),
-    decoration: BoxDecoration(
-      gradient: LinearGradient(colors: [Colors.white, Colors.red.shade50]),
-      borderRadius: BorderRadius.circular(30),
-      boxShadow: [
-        BoxShadow(
-          blurRadius: 28,
-          color: Colors.red.withOpacity(0.22),
-          offset: const Offset(0, 14),
-        ),
-      ],
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              decoration: BoxDecoration(
-                color: const Color(0xFF8B0000),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Text("ORDER ASSIGNED",
-                style: GoogleFonts.poppins(
-                  fontSize: 11, color: Colors.white)),
-            ),
-            const Spacer(),
-            const Icon(Icons.arrow_forward_ios,
-                size: 14, color: Colors.black45),
-          ],
-        ),
-
-        const SizedBox(height: 22),
-
-        /// ORDER ID
-        Text(
-          "Order ID: ${order['order']?['orderId'] ?? '-'}",
-          style: GoogleFonts.poppins(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
+  Widget _assignedOrderCardUI(Map<String, dynamic> order) {
+    return Container(
+      padding: const EdgeInsets.all(26),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(colors: [Colors.white, Colors.red.shade50]),
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: [
+          BoxShadow(
+            blurRadius: 28,
+            color: Colors.red.withOpacity(0.22),
+            offset: const Offset(0, 14),
           ),
-        ),
-
-        const SizedBox(height: 8),
-
-        /// CUSTOMER NAME
-        Text(
-          "Customer: ${order['customer']?['name'] ?? '-'}",
-          style: GoogleFonts.poppins(fontSize: 14),
-        ),
-
-        /// CUSTOMER PHONE
-        Text(
-          "Phone: ${order['customer']?['phone'] ?? '-'}",
-          style: GoogleFonts.poppins(fontSize: 13),
-        ),
-
-        const SizedBox(height: 12),
-
-        /// ITEMS
-        Text(
-          "Items:",
-          style: GoogleFonts.poppins(
-              fontSize: 15, fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 6),
-
-        ...((order["items"] ?? []) as List).map(
-          (item) => Text(
-            "• ${item['name']} x${item['quantity']} (₹${item['finalItemPrice']})",
-            style: GoogleFonts.poppins(fontSize: 13),
-          ),
-        ),
-
-        const SizedBox(height: 12),
-
-        /// ADDRESS
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(7),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.red.shade100,
-              ),
-              child: const Icon(Icons.location_on,
-                  size: 16, color: Colors.redAccent),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                "${order['deliveryAddress']?['addressLine']}, "
-                "${order['deliveryAddress']?['city']} - "
-                "${order['deliveryAddress']?['pincode']}",
-                style: GoogleFonts.poppins(
-                  fontSize: 12,
-                  color: Colors.black54,
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF8B0000),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Text(
+                  "ORDER ASSIGNED",
+                  style: GoogleFonts.poppins(fontSize: 11, color: Colors.white),
                 ),
               ),
-            ),
-          ],
-        ),
-
-        const SizedBox(height: 20),
-
-        /// GRAND TOTAL
-        Text(
-          "Grand Total: ₹${order['order']?['total'] ?? 0}",
-          style: GoogleFonts.poppins(
-            fontSize: 16,
-            color: Colors.green,
-            fontWeight: FontWeight.w600,
+              const Spacer(),
+              const Icon(
+                Icons.arrow_forward_ios,
+                size: 14,
+                color: Colors.black45,
+              ),
+            ],
           ),
-        ),
-      ],
-    ),
-  );
-}
 
+          const SizedBox(height: 22),
+
+          Text(
+            "Order ID: ${order['order']?['orderId'] ?? '-'}",
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+
+          const SizedBox(height: 8),
+
+          Text(
+            "Customer: ${order['customer']?['name'] ?? '-'}",
+            style: GoogleFonts.poppins(fontSize: 14),
+          ),
+
+          Text(
+            "Phone: ${order['customer']?['phone'] ?? '-'}",
+            style: GoogleFonts.poppins(fontSize: 13),
+          ),
+
+          const SizedBox(height: 12),
+
+          Text(
+            "Items:",
+            style: GoogleFonts.poppins(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+
+          ...((order["items"] ?? []) as List).map(
+            (item) => Text(
+              "• ${item['name']} x${item['quantity']} (₹${item['finalItemPrice']})",
+              style: GoogleFonts.poppins(fontSize: 13),
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          Text(
+            "Grand Total: ₹${order['order']?['total'] ?? 0}",
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              color: Colors.green,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
