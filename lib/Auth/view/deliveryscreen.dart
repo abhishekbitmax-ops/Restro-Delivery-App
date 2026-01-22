@@ -3,17 +3,17 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:restro_deliveryapp/Homeview/View/Assignordermodel.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:location/location.dart';
 import 'dart:math';
 
 import 'package:restro_deliveryapp/Auth/controller/Authcontroller.dart';
-import 'package:restro_deliveryapp/Auth/model/authmodel.dart';
 import 'package:restro_deliveryapp/Auth/view/Deliveysuccess.dart';
 import 'package:restro_deliveryapp/utils/SharedPref.dart';
 
 class DeliveryScreen extends StatefulWidget {
-  final PickupData orderData;
+  final OrderData orderData;
 
   const DeliveryScreen({super.key, required this.orderData});
 
@@ -22,13 +22,14 @@ class DeliveryScreen extends StatefulWidget {
 }
 
 class _DeliveryScreenState extends State<DeliveryScreen> {
+  final AuthController auth = Get.put(AuthController());
+
   final List<TextEditingController> _otpControllers = List.generate(
     4,
     (_) => TextEditingController(),
   );
   final List<FocusNode> _focusNodes = List.generate(4, (_) => FocusNode());
 
-  final AuthController auth = Get.put(AuthController());
   LocationData? _currentLocation;
   double? _distanceInKm;
   bool isOtpValid = false;
@@ -45,14 +46,14 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
   Widget build(BuildContext context) {
     final data = widget.orderData;
 
-    final orderId = data.orderId ?? "N/A";
-    final status = data.currentStatus ?? "-";
-    final pickedAt = data.pickedUpAt ?? "-";
+    final orderId = data.order?.orderId ?? "N/A";
+    final status = data.order?.status ?? "-";
+    final pickedAt = data.order?.timeline?.lastOrNull?.at ?? "-";
 
-    final customer = data.customer ?? {};
-    final address = data.deliveryAddress ?? {};
+    final customer = data.customer;
+    final address = data.deliveryAddress;
     final items = data.items ?? [];
-    final amount = data.totalAmount ?? 0;
+    final amount = data.order?.total ?? 0;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF6EEF2),
@@ -71,7 +72,9 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
                   _customerCard(customer, address),
                   const SizedBox(height: 16),
 
-                  _trackMapButton(address), // ⭐ MAP BUTTON
+                  if (address?.lat != null && address?.lng != null)
+                    _trackMapButton(address!),
+
                   const SizedBox(height: 20),
 
                   _itemsCard(items),
@@ -83,7 +86,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
                   _timelineCard(data),
                   const SizedBox(height: 20),
 
-                  _otpSection(orderId),
+                  _otpSection(),
                 ],
               ),
             ),
@@ -160,8 +163,8 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
     );
   }
 
-  // ---------------- CUSTOMER CARD ----------------
-  Widget _customerCard(Map customer, Map address) {
+  // ---------------- CUSTOMER ----------------
+  Widget _customerCard(Customer? customer, DeliveryAddress? address) {
     return _cardContainer(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -174,25 +177,21 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          _infoRow("Name", customer["name"] ?? "-"),
-          _infoRow("Phone", customer["phone"] ?? "-"),
+          _infoRow("Name", customer?.name ?? "-"),
+          _infoRow("Phone", customer?.phone ?? "-"),
           _infoRow(
             "Address",
-            "${address["addressLine"] ?? ''}, "
-                "${address["city"] ?? ''} - "
-                "${address["pincode"] ?? ''}",
+            "${address?.addressLine ?? ""}, "
+                "${address?.city ?? ""} - "
+                "${address?.pincode ?? ""}",
           ),
         ],
       ),
     );
   }
 
-  // ---------------- MAP BUTTON ----------------
-  Widget _trackMapButton(Map address) {
-    if (address["lat"] == null || address["lng"] == null) {
-      return const SizedBox();
-    }
-
+  // ---------------- MAP ----------------
+  Widget _trackMapButton(DeliveryAddress address) {
     return _cardContainer(
       child: ElevatedButton.icon(
         style: ElevatedButton.styleFrom(
@@ -207,140 +206,94 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
             fontWeight: FontWeight.w600,
           ),
         ),
-        onPressed: () => _openMapBottomSheet(address),
+        onPressed: () => _openMapBottomSheet(address.lat!, address.lng!),
       ),
     );
   }
 
-  // ---------------- MAP BOTTOM SHEET ----------------
-  void _openMapBottomSheet(Map address) async {
-    final double destLat = address["lat"];
-    final double destLng = address["lng"];
-
+  void _openMapBottomSheet(double destLat, double destLng) async {
     await _getCurrentLocation(destLat, destLng);
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.9,
-          minChildSize: 0.6,
-          maxChildSize: 0.95,
-          builder: (_, controller) {
-            return Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-              ),
-              child: Column(
-                children: [
-                  // Drag handle
-                  Container(
-                    width: 40,
-                    height: 5,
-                    margin: const EdgeInsets.symmetric(vertical: 10),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-
-                  // Distance chip
-                  if (_distanceInKm != null)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Chip(
-                        label: Text(
-                          "Distance: ${_distanceInKm!.toStringAsFixed(2)} km",
-                          style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        backgroundColor: Colors.green.shade100,
-                      ),
-                    ),
-
-                  Expanded(
-                    child: GoogleMap(
-                      initialCameraPosition: CameraPosition(
-                        target: LatLng(destLat, destLng),
-                        zoom: 14,
-                      ),
-                      myLocationEnabled: true,
-                      myLocationButtonEnabled: true,
-                      markers: {
-                        // Delivery location
-                        Marker(
-                          markerId: const MarkerId("delivery"),
-                          position: LatLng(destLat, destLng),
-                          icon: BitmapDescriptor.defaultMarkerWithHue(
-                            BitmapDescriptor.hueRed,
-                          ),
-                          infoWindow: const InfoWindow(
-                            title: "Delivery Address",
-                          ),
-                        ),
-
-                        // Driver location
-                        if (_currentLocation != null)
-                          Marker(
-                            markerId: const MarkerId("driver"),
-                            position: LatLng(
-                              _currentLocation!.latitude!,
-                              _currentLocation!.longitude!,
-                            ),
-                            icon: BitmapDescriptor.defaultMarkerWithHue(
-                              BitmapDescriptor.hueBlue,
-                            ),
-                            infoWindow: const InfoWindow(
-                              title: "Your Location",
-                            ),
-                          ),
-                      },
-                    ),
-                  ),
-
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.9,
+        minChildSize: 0.6,
+        maxChildSize: 0.95,
+        builder: (_, controller) {
+          return Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: Column(
+              children: [
+                if (_distanceInKm != null)
                   Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        minimumSize: const Size(double.infinity, 48),
-                      ),
-                      icon: const Icon(Icons.navigation, color: Colors.white),
+                    padding: const EdgeInsets.all(8),
+                    child: Chip(
                       label: Text(
-                        "Open in Google Maps",
-                        style: GoogleFonts.poppins(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                        ),
+                        "Distance: ${_distanceInKm!.toStringAsFixed(2)} km",
+                        style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
                       ),
-                      onPressed: () => _launchGoogleMaps(destLat, destLng),
+                      backgroundColor: Colors.green.shade100,
                     ),
                   ),
-                ],
-              ),
-            );
-          },
-        );
-      },
+                Expanded(
+                  child: GoogleMap(
+                    initialCameraPosition: CameraPosition(
+                      target: LatLng(destLat, destLng),
+                      zoom: 14,
+                    ),
+                    myLocationEnabled: true,
+                    markers: {
+                      Marker(
+                        markerId: const MarkerId("delivery"),
+                        position: LatLng(destLat, destLng),
+                      ),
+                      if (_currentLocation != null)
+                        Marker(
+                          markerId: const MarkerId("driver"),
+                          position: LatLng(
+                            _currentLocation!.latitude!,
+                            _currentLocation!.longitude!,
+                          ),
+                          icon: BitmapDescriptor.defaultMarkerWithHue(
+                            BitmapDescriptor.hueBlue,
+                          ),
+                        ),
+                    },
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.navigation, color: Colors.white),
+                    label: const Text("Open in Google Maps"),
+                    onPressed: () => _launchGoogleMaps(destLat, destLng),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 
   Future<void> _launchGoogleMaps(double lat, double lng) async {
     final uri = Uri.parse(
-      "https://www.google.com/maps/dir/?api=1&destination=$lat,$lng&travelmode=driving",
+      "https://www.google.com/maps/dir/?api=1&destination=$lat,$lng",
     );
-
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
   }
 
   // ---------------- ITEMS ----------------
-  Widget _itemsCard(List items) {
+  Widget _itemsCard(List<OrderItem> items) {
     return _cardContainer(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -354,14 +307,14 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
           ),
           const SizedBox(height: 12),
           ...items.map(
-            (item) => Padding(
+            (i) => Padding(
               padding: const EdgeInsets.symmetric(vertical: 6),
               child: Row(
                 children: [
                   const Icon(Icons.fastfood, color: Colors.red, size: 20),
                   const SizedBox(width: 10),
-                  Expanded(child: Text(item["name"] ?? "")),
-                  Text("x${item["quantity"] ?? 1}"),
+                  Expanded(child: Text(i.name ?? "")),
+                  Text("x${i.quantity ?? 1}"),
                 ],
               ),
             ),
@@ -372,7 +325,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
   }
 
   // ---------------- PAYMENT ----------------
-  Widget _paymentCard(amount) {
+  Widget _paymentCard(num amount) {
     return _cardContainer(
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -398,7 +351,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
   }
 
   // ---------------- TIMELINE ----------------
-  Widget _timelineCard(PickupData order) {
+  Widget _timelineCard(OrderData data) {
     return _cardContainer(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -411,7 +364,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          ...?order.timeline?.map(
+          ...?data.order?.timeline?.map(
             (t) => Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: Row(
@@ -434,7 +387,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
   }
 
   // ---------------- OTP ----------------
-  Widget _otpSection(String orderId) {
+  Widget _otpSection() {
     return _cardContainer(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -463,15 +416,33 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
         controller: _otpControllers[index],
         focusNode: _focusNodes[index],
         keyboardType: TextInputType.number,
-        maxLength: 1,
         textAlign: TextAlign.center,
+        maxLength: 1,
+        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
         decoration: _inputDecoration(),
-        onChanged: (_) => _checkOtp(),
+        onChanged: (value) {
+          _checkOtp();
+
+          // 👉 Move to next box
+          if (value.isNotEmpty && index < _focusNodes.length - 1) {
+            FocusScope.of(context).requestFocus(_focusNodes[index + 1]);
+          }
+
+          // 👉 Last box → close keyboard
+          if (value.isNotEmpty && index == _focusNodes.length - 1) {
+            FocusScope.of(context).unfocus();
+          }
+
+          // 👉 Backspace → move to previous
+          if (value.isEmpty && index > 0) {
+            FocusScope.of(context).requestFocus(_focusNodes[index - 1]);
+          }
+        },
       ),
     );
   }
 
-  // ---------------- COMPLETE DELIVERY ----------------
+  // ---------------- COMPLETE ----------------
   Widget _bottomButtons(String orderId) {
     return SafeArea(
       child: ElevatedButton(
@@ -515,7 +486,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
     }
   }
 
-  // ---------------- UI HELPERS ----------------
+  // ---------------- HELPERS ----------------
   Widget _cardContainer({required Widget child}) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -546,13 +517,11 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
   Future<void> _getCurrentLocation(double destLat, double destLng) async {
     final location = Location();
 
-    bool serviceEnabled = await location.serviceEnabled();
-    if (!serviceEnabled) {
-      serviceEnabled = await location.requestService();
-      if (!serviceEnabled) return;
+    if (!await location.serviceEnabled()) {
+      if (!await location.requestService()) return;
     }
 
-    PermissionStatus permission = await location.hasPermission();
+    var permission = await location.hasPermission();
     if (permission == PermissionStatus.denied) {
       permission = await location.requestPermission();
       if (permission != PermissionStatus.granted) return;
@@ -577,8 +546,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
     double lat2,
     double lon2,
   ) {
-    const double earthRadius = 6371; // KM
-
+    const earthRadius = 6371.0;
     final dLat = _degToRad(lat2 - lat1);
     final dLon = _degToRad(lon2 - lon1);
 

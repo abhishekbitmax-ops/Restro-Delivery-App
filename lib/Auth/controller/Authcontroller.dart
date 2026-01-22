@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:restro_deliveryapp/Auth/model/authmodel.dart';
 import 'package:restro_deliveryapp/Auth/view/Profile.dart';
 import 'package:restro_deliveryapp/Auth/view/SocketService.dart';
+import 'package:restro_deliveryapp/Homeview/View/Assignordermodel.dart';
 import 'package:restro_deliveryapp/utils/SharedPref.dart';
 import 'package:restro_deliveryapp/utils/api_endpoints.dart';
 import 'package:geolocator/geolocator.dart';
@@ -482,7 +483,7 @@ class AuthController extends GetxController {
     String otp,
   ) async {
     final String url =
-        "https://sog.bitmaxtest.com/api/v1/delivery/$orderId/verify-otp";
+        "http://192.168.1.108:5004/api/v1/delivery/$orderId/verify-otp";
 
     print("📌 VERIFY OTP PATCH URL → $url");
 
@@ -509,7 +510,7 @@ class AuthController extends GetxController {
   Future<String?> uploadToCloudinary(File file) async {
     try {
       final url = Uri.parse(
-        "https://sog.bitmaxtest.com/v1_1/dp8jfjx7c/image/upload",
+        "http://192.168.1.108:5004/v1_1/dp8jfjx7c/image/upload",
       );
 
       final request = http.MultipartRequest("POST", url)
@@ -534,7 +535,7 @@ class AuthController extends GetxController {
       String token = await SharedPre.getAccessToken();
 
       final String url =
-          "https://sog.bitmaxtest.com/api/v1/delivery/pick-order/$orderId";
+          "http://192.168.1.108:5004/api/v1/delivery/pick-order/$orderId";
 
       debugPrint("PICKUP ORDER URL → $url");
 
@@ -559,44 +560,43 @@ class AuthController extends GetxController {
   // ----------------------------------------------------------------------
   // ⭐ ASSIGNED ORDER
 
-Future<Map<String, dynamic>?> getAssignedOrderFromApi() async {
-  try {
-    final token = await SharedPre.getAccessToken();
+  Future<AssignedOrderResponse?> getAssignedOrderFromApi() async {
+    try {
+      final token = await SharedPre.getAccessToken();
 
-    final response = await http.get(
-      Uri.parse("https://sog.bitmaxtest.com/api/v1/delivery/assigned-order"),
-      headers: {
-        "Authorization": "Bearer $token",
-        "Content-Type": "application/json",
-      },
-    );
+      final response = await http.get(
+        Uri.parse("http://192.168.1.108:5004/api/v1/delivery/assigned-order"),
+        headers: {
+          "Authorization": "Bearer $token",
+          "Content-Type": "application/json",
+        },
+      );
 
-    debugPrint("📦 ASSIGNED ORDER API → ${response.body}");
-
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      final json = jsonDecode(response.body);
-
-      // ✅ Backend success but no order
-      if (json["data"] == null) {
-        Get.find<OrderSocketService>().assignedOrder.value = null;
+      if (response.statusCode != 200) {
+        debugPrint("❌ ASSIGNED ORDER API STATUS: ${response.statusCode}");
         return null;
       }
 
-      // ✅ Backend has assigned order
-      final order = json["data"];
+      final json = jsonDecode(response.body);
 
-      // 🔥 Sync API result with SOCKET STATE
-      Get.find<OrderSocketService>().assignedOrder.value = order;
+      final socketService = Get.find<OrderSocketService>();
+
+      /// 🔥 NO ORDER
+      if (json["data"] == null) {
+        socketService.assignedOrder.value = null;
+        return null;
+      }
+
+      /// 🔥 PARSE MODEL
+      final order = AssignedOrderResponse.fromJson(json);
+
+      /// 🔥 API → SOCKET → UI (single source of truth)
+      socketService.pushOrderFromApi(order);
 
       return order;
-    } else {
-      debugPrint("❌ Assigned Order API Failed: ${response.statusCode}");
+    } catch (e) {
+      debugPrint("❌ ASSIGNED ORDER API ERROR: $e");
       return null;
     }
-  } catch (e) {
-    debugPrint("❌ ASSIGNED ORDER API ERROR: $e");
-    return null;
   }
-}
-
 }

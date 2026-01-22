@@ -530,3 +530,7 @@ class PickupTimeline {
     );
   }
 }
+
+
+//assign order api model class 
+

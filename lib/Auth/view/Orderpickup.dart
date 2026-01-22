@@ -3,12 +3,13 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+
 import 'package:restro_deliveryapp/Auth/controller/Authcontroller.dart';
-import 'package:restro_deliveryapp/Auth/model/authmodel.dart';
 import 'package:restro_deliveryapp/Auth/view/deliveryscreen.dart';
+import 'package:restro_deliveryapp/Homeview/View/Assignordermodel.dart';
 
 class PickupScreen extends StatefulWidget {
-  final Map<String, dynamic> orderData;
+  final OrderData orderData;
 
   const PickupScreen({
     super.key,
@@ -34,17 +35,21 @@ class _PickupScreenState extends State<PickupScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label,
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    color: Colors.black45,
-                  )),
+              Text(
+                label,
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  color: Colors.black45,
+                ),
+              ),
               const SizedBox(height: 2),
-              Text(value,
-                  style: GoogleFonts.poppins(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                  )),
+              Text(
+                value,
+                style: GoogleFonts.poppins(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ],
           ),
         ),
@@ -53,7 +58,7 @@ class _PickupScreenState extends State<PickupScreen> {
   }
 
   // ---------------- ITEM TILE ----------------
-  Widget _itemTile(Map item) {
+  Widget _itemTile(OrderItem item) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
       margin: const EdgeInsets.only(bottom: 10),
@@ -65,10 +70,10 @@ class _PickupScreenState extends State<PickupScreen> {
       child: Row(
         children: [
           Icon(Icons.fastfood, size: 22, color: Colors.red.shade600),
-        const SizedBox(width: 12),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
-              item["name"],
+              item.name ?? "-",
               style: GoogleFonts.poppins(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
@@ -76,7 +81,7 @@ class _PickupScreenState extends State<PickupScreen> {
             ),
           ),
           Text(
-            "x${item["quantity"]}",
+            "x${item.quantity ?? 0}",
             style: GoogleFonts.poppins(
               fontSize: 14,
               fontWeight: FontWeight.w500,
@@ -88,9 +93,9 @@ class _PickupScreenState extends State<PickupScreen> {
     );
   }
 
-  // ---------------- AUTO NAVIGATE IF ALREADY PICKED ----------------
+  // ---------------- AUTO NAVIGATE ----------------
   void checkAndNavigateIfOutForDelivery() {
-    final status = widget.orderData["currentStatus"] ?? "";
+    final status = widget.orderData.order?.status ?? "";
 
     if (status == "OUT_FOR_DELIVERY") {
       Fluttertoast.showToast(
@@ -99,9 +104,7 @@ class _PickupScreenState extends State<PickupScreen> {
         textColor: Colors.white,
       );
 
-      Get.off(() => DeliveryScreen(
-            orderData: PickupData.fromJson(widget.orderData),
-          ));
+      Get.off(() => DeliveryScreen(orderData: widget.orderData));
     }
   }
 
@@ -118,16 +121,11 @@ class _PickupScreenState extends State<PickupScreen> {
 
     final order = widget.orderData;
 
-    // ----------- EXTRACT ORDER FIELDS -----------
-    final String orderId = order["order"]?["orderId"] ??
-        order["orderId"] ??
-        order["_id"] ??
-        "";
-
-    final customer = order["customer"] ?? {};
-    final location = order["deliveryAddress"] ?? {};
-    final items = (order["items"] ?? []) as List;
-    final totalAmount = order["order"]?["total"] ?? 0;
+    final String orderId = order.order?.orderId ?? "-";
+    final customer = order.customer;
+    final location = order.deliveryAddress;
+    final items = order.items ?? [];
+    final totalAmount = order.order?.total ?? 0;
 
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
@@ -176,14 +174,13 @@ class _PickupScreenState extends State<PickupScreen> {
                   // ----------- ORDER CARD -----------
                   Container(
                     padding: const EdgeInsets.all(18),
-                    width: double.infinity,
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(18),
-                      boxShadow: [
+                      boxShadow: const [
                         BoxShadow(
                           blurRadius: 6,
-                          offset: const Offset(0, 3),
+                          offset: Offset(0, 3),
                           color: Colors.black12,
                         ),
                       ],
@@ -200,17 +197,25 @@ class _PickupScreenState extends State<PickupScreen> {
                         ),
                         const SizedBox(height: 14),
 
-                        _infoTile("Customer Name",
-                            customer["name"] ?? "-", Icons.person),
+                        _infoTile(
+                          "Customer Name",
+                          customer?.name ?? "-",
+                          Icons.person,
+                        ),
                         const SizedBox(height: 14),
 
-                        _infoTile("Phone Number",
-                            customer["phone"] ?? "-", Icons.phone),
+                        _infoTile(
+                          "Phone Number",
+                          customer?.phone ?? "-",
+                          Icons.phone,
+                        ),
                         const SizedBox(height: 14),
 
                         _infoTile(
                           "Delivery Address",
-                          "${location["addressLine"]}, ${location["city"]} - ${location["pincode"]}",
+                          "${location?.addressLine ?? ""}, "
+                          "${location?.city ?? ""} - "
+                          "${location?.pincode ?? ""}",
                           Icons.location_on,
                         ),
                       ],
@@ -220,14 +225,16 @@ class _PickupScreenState extends State<PickupScreen> {
                   const SizedBox(height: 28),
 
                   // ----------- ITEMS -----------
-                  Text("Order Items",
-                      style: GoogleFonts.poppins(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                      )),
+                  Text(
+                    "Order Items",
+                    style: GoogleFonts.poppins(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   const SizedBox(height: 14),
 
-                  ...items.map((e) => _itemTile(e)).toList(),
+                  ...items.map(_itemTile).toList(),
 
                   const SizedBox(height: 28),
 
@@ -242,9 +249,13 @@ class _PickupScreenState extends State<PickupScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text("Grand Total:",
-                            style: GoogleFonts.poppins(
-                                fontSize: 16, fontWeight: FontWeight.w600)),
+                        Text(
+                          "Grand Total:",
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                         Text(
                           "₹$totalAmount",
                           style: GoogleFonts.poppins(
@@ -281,68 +292,28 @@ class _PickupScreenState extends State<PickupScreen> {
 
                               setState(() => isLoading = false);
 
-                              if (pickupResponse == null) {
+                              if (pickupResponse == null ||
+                                  pickupResponse.success != true) {
                                 Fluttertoast.showToast(
-                                  msg: "Something went wrong",
+                                  msg: pickupResponse?.message ??
+                                      "Pickup failed",
                                   backgroundColor: Colors.red,
                                   textColor: Colors.white,
                                 );
                                 return;
                               }
 
-                              final bool success =
-                                  pickupResponse.success ?? false;
-                              final String message =
-                                  pickupResponse.message ??
-                                      "Pickup failed";
-                              final orderModel = pickupResponse.data;
-
-                         if (success && orderModel != null) {
-  Fluttertoast.showToast(
-    msg: "Pickup Successful",
-    backgroundColor: Colors.green,
-    textColor: Colors.white,
-  );
-
-  // ⭐ COPY PICKUP API DATA INTO MODEL CORRECTLY
-  orderModel.orderId = pickupResponse.data?.orderId;
-  orderModel.currentStatus = pickupResponse.data?.currentStatus;
-  orderModel.pickedUpAt = pickupResponse.data?.pickedUpAt;
-  orderModel.timeline = pickupResponse.data?.timeline;
-
-  // ⭐ MERGE CUSTOMER / ADDRESS / ITEMS FROM ASSIGNED ORDER
-  orderModel.customer = customer;
-  orderModel.deliveryAddress = location;
-  orderModel.items = items;
-  orderModel.totalAmount = totalAmount;
-
-  // Navigate
-  Get.off(() => DeliveryScreen(orderData: orderModel));
-  return;
-}
-
-
-                              // ------------- ALREADY PICKED-------------
-                              if (message.contains("OUT_FOR_DELIVERY")) {
-                                Fluttertoast.showToast(
-                                  msg: "Order already picked!",
-                                  backgroundColor: Colors.orange,
-                                  textColor: Colors.white,
-                                );
-
-                                // fallback
-                                Get.off(() => DeliveryScreen(
-                                      orderData: PickupData.fromJson(
-                                          widget.orderData),
-                                    ));
-                                return;
-                              }
-
-                              // ------------- ERROR -------------
                               Fluttertoast.showToast(
-                                msg: message,
-                                backgroundColor: Colors.red,
+                                msg: "Pickup Successful",
+                                backgroundColor: Colors.green,
                                 textColor: Colors.white,
+                              );
+
+                              /// 🔥 UPDATE STATUS LOCALLY
+                              order.order?.status = "OUT_FOR_DELIVERY";
+
+                              Get.off(
+                                () => DeliveryScreen(orderData: order),
                               );
                             },
                       child: isLoading
