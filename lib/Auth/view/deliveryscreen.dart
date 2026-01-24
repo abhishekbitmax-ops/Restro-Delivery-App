@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:restro_deliveryapp/Auth/view/SocketService.dart';
 import 'package:restro_deliveryapp/Homeview/View/Assignordermodel.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:location/location.dart';
@@ -200,95 +201,41 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
         ),
         icon: const Icon(Icons.map, color: Colors.white),
         label: Text(
-          "Track on Map",
+          "Open in Google Maps",
           style: GoogleFonts.poppins(
             color: Colors.white,
             fontWeight: FontWeight.w600,
           ),
         ),
-        onPressed: () => _openMapBottomSheet(address.lat!, address.lng!),
+        onPressed: () => _openGoogleMaps(address),
       ),
     );
   }
 
-  void _openMapBottomSheet(double destLat, double destLng) async {
-    await _getCurrentLocation(destLat, destLng);
+  Future<void> _openGoogleMaps(DeliveryAddress address) async {
+    if (address.lat == null || address.lng == null) {
+      Get.snackbar(
+        "Location Error",
+        "Delivery location not available",
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      return;
+    }
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => DraggableScrollableSheet(
-        initialChildSize: 0.9,
-        minChildSize: 0.6,
-        maxChildSize: 0.95,
-        builder: (_, controller) {
-          return Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-            ),
-            child: Column(
-              children: [
-                if (_distanceInKm != null)
-                  Padding(
-                    padding: const EdgeInsets.all(8),
-                    child: Chip(
-                      label: Text(
-                        "Distance: ${_distanceInKm!.toStringAsFixed(2)} km",
-                        style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-                      ),
-                      backgroundColor: Colors.green.shade100,
-                    ),
-                  ),
-                Expanded(
-                  child: GoogleMap(
-                    initialCameraPosition: CameraPosition(
-                      target: LatLng(destLat, destLng),
-                      zoom: 14,
-                    ),
-                    myLocationEnabled: true,
-                    markers: {
-                      Marker(
-                        markerId: const MarkerId("delivery"),
-                        position: LatLng(destLat, destLng),
-                      ),
-                      if (_currentLocation != null)
-                        Marker(
-                          markerId: const MarkerId("driver"),
-                          position: LatLng(
-                            _currentLocation!.latitude!,
-                            _currentLocation!.longitude!,
-                          ),
-                          icon: BitmapDescriptor.defaultMarkerWithHue(
-                            BitmapDescriptor.hueBlue,
-                          ),
-                        ),
-                    },
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: ElevatedButton.icon(
-                    icon: const Icon(Icons.navigation, color: Colors.white),
-                    label: const Text("Open in Google Maps"),
-                    onPressed: () => _launchGoogleMaps(destLat, destLng),
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Future<void> _launchGoogleMaps(double lat, double lng) async {
     final uri = Uri.parse(
-      "https://www.google.com/maps/dir/?api=1&destination=$lat,$lng",
+      "https://www.google.com/maps/dir/?api=1&destination=${address.lat},${address.lng}",
     );
+
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      Get.snackbar(
+        "Error",
+        "Could not open Google Maps",
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
     }
   }
 
@@ -474,7 +421,12 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
     Get.back();
 
     if (result?["success"] == true) {
+      /// 🔥 CLEAR SOCKET STATE
+      final socket = Get.find<OrderSocketService>();
+      socket.assignedOrder.value = null;
+
       await SharedPre.clearAssignedOrder();
+
       Get.off(() => DeliverySuccessScreen(orderId: orderId));
     } else {
       Get.snackbar(

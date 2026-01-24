@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:restro_deliveryapp/Auth/controller/Authcontroller.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:geolocator/geolocator.dart';
 
@@ -11,22 +12,16 @@ import 'package:restro_deliveryapp/Homeview/View/Globalnotifactio.dart';
 class OrderSocketService extends GetxService {
   late IO.Socket socket;
 
-  /// 🔥 SINGLE SOURCE OF TRUTH (Rx)
-  final Rx<AssignedOrderResponse?> assignedOrder = Rx<AssignedOrderResponse?>(
-    null,
-  );
+  /// 🔥 SINGLE SOURCE OF TRUTH
+  final Rxn<AssignedOrderResponse> assignedOrder = Rxn<AssignedOrderResponse>();
 
   AssignedOrderResponse? _lastOrder;
   Timer? _heartbeatTimer;
 
-  // ----------------------------------------------------
-  // INIT
-  // ----------------------------------------------------
   @override
   void onInit() {
     super.onInit();
 
-    /// 🔔 Notification only when NEW order arrives
     ever<AssignedOrderResponse?>(assignedOrder, (order) {
       if (order != null && _lastOrder == null) {
         GlobalNotificationService.show(
@@ -38,14 +33,11 @@ class OrderSocketService extends GetxService {
     });
   }
 
-  // ----------------------------------------------------
-  // SOCKET CONNECT
-  // ----------------------------------------------------
   Future<OrderSocketService> init() async {
     final token = await SharedPre.getAccessToken();
 
     socket = IO.io(
-      "http://192.168.1.108:5004/orders",
+      "https://sog.bitmaxtest.com/orders",
       IO.OptionBuilder()
           .setTransports(['websocket'])
           .setAuth({"token": token})
@@ -54,23 +46,47 @@ class OrderSocketService extends GetxService {
           .build(),
     );
 
-    socket.onConnect((_) {
+    socket.onConnect((_) async {
       debugPrint("✅ SOCKET CONNECTED");
-      _startHeartbeat(); // ❤️ start 10s heartbeat
+      _startHeartbeat();
+
+      /// 🔥 API SYNC ON CONNECT
+      final auth = Get.find<AuthController>();
+      await auth.getAssignedOrderFromApi();
     });
 
-    socket.on("CONNECTION_ESTABLISHED", (data) {
-      debugPrint("🔥 CONNECTION_ESTABLISHED: $data");
-    });
-
-    /// 🔥 SERVER → CLIENT (IMPORTANT FIX)
     socket.on("DELIVERY_ASSIGNED", (data) {
       debugPrint("🔥 DELIVERY_ASSIGNED SOCKET → $data");
 
-      // ✅ ALWAYS CREATE NEW INSTANCE (FOR Obx)
-      assignedOrder.value = AssignedOrderResponse.fromJson(
-        Map<String, dynamic>.from(data),
-      );
+      final mappedData = {
+        "order": {
+          "id": data["orderId"],
+          "orderId": data["customOrderId"],
+          "status": data["status"],
+          "total": data["price"]?["grandTotal"],
+        },
+        "customer": data["customer"],
+        "deliveryAddress": data["location"], // rename
+        "items": (data["items"] as List).map((item) {
+          return {
+            "itemId": {
+              "_id": item["itemId"], // 🔥 STRING → MAP
+              "name": item["name"],
+            },
+            "name": item["name"],
+            "quantity": item["quantity"],
+            "basePrice": item["basePrice"],
+            "addons": item["addons"],
+            "finalItemPrice": item["finalItemPrice"],
+          };
+        }).toList(),
+        "assignedAt": data["assignedAt"],
+      };
+
+      assignedOrder.value = AssignedOrderResponse.fromJson({
+        "success": true,
+        "data": mappedData,
+      });
     });
 
     socket.onDisconnect((_) {
@@ -81,17 +97,12 @@ class OrderSocketService extends GetxService {
     return this;
   }
 
-  // ----------------------------------------------------
-  // ❤️ HEARTBEAT (EVERY 10 SEC)
-  // ----------------------------------------------------
+  // ❤️ HEARTBEAT
   void _startHeartbeat() {
     _heartbeatTimer?.cancel();
-
     _heartbeatTimer = Timer.periodic(const Duration(seconds: 10), (_) async {
       await _emitLocation();
     });
-
-    debugPrint("❤️ HEARTBEAT STARTED (10 sec)");
   }
 
   void _stopHeartbeat() {
@@ -99,55 +110,34 @@ class OrderSocketService extends GetxService {
     _heartbeatTimer = null;
   }
 
-  // ----------------------------------------------------
-  // 📡 EMIT LOCATION ONLY (CLEAN & SAFE)
-  // ----------------------------------------------------
   Future<void> _emitLocation() async {
-    try {
-      final pos = await _getSafeLocation();
-      if (pos == null) return;
+    final pos = await _getSafeLocation();
+    if (pos == null) return;
 
-      final currentOrder = assignedOrder.value;
+    final currentOrder = assignedOrder.value;
 
-      socket.emit("UPDATE_LOCATION", {
-        "role": "DELIVERY_PARTNER",
-        "location": {"lat": pos.latitude, "lng": pos.longitude},
-        if (currentOrder != null && currentOrder.data != null)
-          "assignedOrder": currentOrder.data!.toJson(),
-      });
+    socket.emit("UPDATE_LOCATION", {
+      "role": "DELIVERY_PARTNER",
+      "location": {"lat": pos.latitude, "lng": pos.longitude},
+      if (currentOrder?.data != null)
+        "assignedOrder": currentOrder!.data!.toJson(),
+    });
 
-      // 📡 LOCATION LOG
-      debugPrint(
-        "📡 UPDATE_LOCATION → lat:${pos.latitude}, lng:${pos.longitude}",
-      );
-
-      // 📦 ASSIGNED ORDER LOG
-      if (currentOrder != null) {
-        debugPrint("📦 ASSIGNED_ORDER → ${currentOrder.toJson()}");
-      } else {
-        debugPrint("📦 ASSIGNED_ORDER → null");
-      }
-    } catch (e) {
-      debugPrint("❌ HEARTBEAT ERROR: $e");
-    }
+    debugPrint(
+      "📦 ASSIGNED_ORDER → success:${currentOrder?.success}, "
+      "hasData:${currentOrder?.data != null}",
+    );
   }
 
-  // ----------------------------------------------------
-  // API → SOCKET BRIDGE
-  // ----------------------------------------------------
+  /// 🔥 API → SOCKET BRIDGE (FIXED)
   void pushOrderFromApi(AssignedOrderResponse order) {
-    /// ✅ FORCE NEW INSTANCE (Obx trigger)
-    assignedOrder.value = AssignedOrderResponse.fromJson(order.toJson());
+    assignedOrder.value = order;
   }
 
-  // ----------------------------------------------------
-  // SAFE LOCATION
-  // ----------------------------------------------------
   Future<Position?> _getSafeLocation() async {
-    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) return null;
+    if (!await Geolocator.isLocationServiceEnabled()) return null;
 
-    LocationPermission permission = await Geolocator.checkPermission();
+    var permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
     }
@@ -157,7 +147,7 @@ class OrderSocketService extends GetxService {
       return null;
     }
 
-    return await Geolocator.getCurrentPosition(
+    return Geolocator.getCurrentPosition(
       desiredAccuracy: LocationAccuracy.high,
     );
   }

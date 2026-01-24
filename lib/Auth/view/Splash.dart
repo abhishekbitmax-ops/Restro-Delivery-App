@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+
 import 'package:restro_deliveryapp/Auth/view/Login.dart';
 import 'package:restro_deliveryapp/Auth/view/Navbar.dart';
+import 'package:restro_deliveryapp/Auth/view/SocketService.dart';
 import 'package:restro_deliveryapp/utils/SharedPref.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -14,7 +16,6 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
-  
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
   late Animation<double> _fadeAnimation;
@@ -28,32 +29,33 @@ class _SplashScreenState extends State<SplashScreen>
       duration: const Duration(seconds: 2),
     );
 
-    _scaleAnimation = Tween<double>(begin: 0.6, end: 1.0)
-        .animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOutBack,
-    ));
+    _scaleAnimation = Tween<double>(begin: 0.6, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),
+    );
 
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0)
-        .animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeIn,
-    ));
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeIn),
+    );
 
     _controller.forward();
 
-    // 🔥 Check login status after 3 sec
-    Timer(const Duration(seconds: 3), () async {
-      String token = await SharedPre.getAccessToken();
+    /// 🔥 INIT APP (TOKEN + SOCKET)
+    _initApp();
+  }
 
-      if (token.isNotEmpty) {
-        // Already logged in → Go to dashboard
-        Get.offAll(() => const BottomNavBar());
-      } else {
-        // No Login → Go to Login screen
-        Get.offAll(() => const DeliveryLoginScreen());
-      }
-    });
+  Future<void> _initApp() async {
+    await Future.delayed(const Duration(seconds: 3));
+
+    final token = await SharedPre.getAccessToken();
+
+    if (token.isNotEmpty) {
+      /// ✅ CONNECT SOCKET ONLY AFTER TOKEN
+      await Get.find<OrderSocketService>().init();
+
+      Get.offAll(() => const BottomNavBar());
+    } else {
+      Get.offAll(() => const DeliveryLoginScreen());
+    }
   }
 
   @override
@@ -69,10 +71,7 @@ class _SplashScreenState extends State<SplashScreen>
         width: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [
-              Color(0xFFC62828),
-              Color(0xFF8E0000),
-            ],
+            colors: [Color(0xFFC62828), Color(0xFF8E0000)],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -114,7 +113,6 @@ class _SplashScreenState extends State<SplashScreen>
 
             const SizedBox(height: 25),
 
-            /// APP NAME
             FadeTransition(
               opacity: _fadeAnimation,
               child: const Text(
@@ -130,7 +128,6 @@ class _SplashScreenState extends State<SplashScreen>
 
             const SizedBox(height: 8),
 
-            /// TAGLINE
             FadeTransition(
               opacity: _fadeAnimation,
               child: const Text(

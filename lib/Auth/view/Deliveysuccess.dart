@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:restro_deliveryapp/Auth/view/Navbar.dart';
+import 'package:restro_deliveryapp/Auth/view/SocketService.dart';
 
 class DeliverySuccessScreen extends StatelessWidget {
   final String orderId;
@@ -18,7 +19,6 @@ class DeliverySuccessScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-
               // SUCCESS ICON
               Container(
                 padding: const EdgeInsets.all(20),
@@ -48,10 +48,7 @@ class DeliverySuccessScreen extends StatelessWidget {
 
               Text(
                 "Order ID: $orderId",
-                style: GoogleFonts.poppins(
-                  fontSize: 15,
-                  color: Colors.black54,
-                ),
+                style: GoogleFonts.poppins(fontSize: 15, color: Colors.black54),
               ),
 
               const SizedBox(height: 30),
@@ -59,10 +56,7 @@ class DeliverySuccessScreen extends StatelessWidget {
               Text(
                 "Your delivery has been successfully completed.\nThank you!",
                 textAlign: TextAlign.center,
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  color: Colors.black54,
-                ),
+                style: GoogleFonts.poppins(fontSize: 14, color: Colors.black54),
               ),
 
               const SizedBox(height: 50),
@@ -70,8 +64,12 @@ class DeliverySuccessScreen extends StatelessWidget {
               // BACK TO HOME BUTTON
               ElevatedButton(
                 onPressed: () {
-                  Get.offAll(() => const BottomNavBar(initialIndex: 0,)); // 👈 apna Home route add karo
+                  final socket = Get.find<OrderSocketService>();
+                  socket.assignedOrder.value = null; // 🛡️ safety
+
+                  Get.offAll(() => const BottomNavBar(initialIndex: 0));
                 },
+
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF8B0000),
                   minimumSize: const Size(double.infinity, 50),
@@ -87,7 +85,7 @@ class DeliverySuccessScreen extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-              )
+              ),
             ],
           ),
         ),

@@ -8,6 +8,8 @@ import 'package:restro_deliveryapp/Auth/controller/Authcontroller.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
+import 'package:restro_deliveryapp/Auth/view/Login.dart';
+
 class DeliveryRegistrationScreen extends StatefulWidget {
   const DeliveryRegistrationScreen({super.key});
 
@@ -96,43 +98,19 @@ class _DeliveryRegistrationScreenState
     );
 
     if (source != null) {
-      final picked =
-          await picker.pickImage(source: source, imageQuality: 70);
+      final picked = await picker.pickImage(source: source, imageQuality: 70);
       if (picked != null) onPicked(File(picked.path));
-    }
-  }
-
-  // ---------------------------------------------
-  // CLOUDINARY UPLOAD
-  // ---------------------------------------------
-  Future<String?> uploadToCloudinary(File file) async {
-    try {
-      var request = http.MultipartRequest(
-        "POST",
-        Uri.parse("https://api.cloudinary.com/v1_1/dp8jfjx7c/image/upload"),
-      );
-
-      request.fields["upload_preset"] = "ml_default";
-      request.files
-          .add(await http.MultipartFile.fromPath("file", file.path));
-
-      var response = await request.send();
-      var resStr = await response.stream.bytesToString();
-      var data = jsonDecode(resStr);
-
-      return data["secure_url"];
-    } catch (e) {
-      print("Cloudinary upload error: $e");
-      return null;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-      statusBarColor: Color(0xFF8B0000),
-      statusBarIconBrightness: Brightness.light,
-    ));
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Color(0xFF8B0000),
+        statusBarIconBrightness: Brightness.light,
+      ),
+    );
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -141,7 +119,6 @@ class _DeliveryRegistrationScreenState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
             // HEADER
             Container(
               width: double.infinity,
@@ -208,12 +185,15 @@ class _DeliveryRegistrationScreenState
                   CircleAvatar(
                     radius: 52,
                     backgroundColor: Colors.grey.shade200,
-                    backgroundImage:
-                        profileImageFile != null
-                            ? FileImage(profileImageFile!)
-                            : null,
+                    backgroundImage: profileImageFile != null
+                        ? FileImage(profileImageFile!)
+                        : null,
                     child: profileImageFile == null
-                        ? const Icon(Icons.person, size: 46, color: Colors.black45)
+                        ? const Icon(
+                            Icons.person,
+                            size: 46,
+                            color: Colors.black45,
+                          )
                         : null,
                   ),
                   Positioned(
@@ -228,7 +208,11 @@ class _DeliveryRegistrationScreenState
                       child: const CircleAvatar(
                         radius: 18,
                         backgroundColor: Color(0xFF8B0000),
-                        child: Icon(Icons.camera_alt, size: 18, color: Colors.white),
+                        child: Icon(
+                          Icons.camera_alt,
+                          size: 18,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),
@@ -257,7 +241,10 @@ class _DeliveryRegistrationScreenState
                   setState(() {});
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 16,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.grey.shade50,
                     borderRadius: BorderRadius.circular(12),
@@ -310,19 +297,24 @@ class _DeliveryRegistrationScreenState
                 onChanged: (v) => setState(() => vehicleType = v!),
               ),
             ),
-            _field(vehicleNumberCtrl, Icons.confirmation_number_outlined,
-                "Vehicle Number"),
+            _field(
+              vehicleNumberCtrl,
+              Icons.confirmation_number_outlined,
+              "Vehicle Number",
+            ),
             _section("Upload Documents (KYC)"),
             _field(aadhaarIdCtrl, Icons.credit_card, "Aadhaar Number"),
             _uploadKyc(
               title: "Aadhaar Front Image",
               file: aadhaarFrontFile,
-              onTap: () => _pickImage((file) => setState(() => aadhaarFrontFile = file)),
+              onTap: () =>
+                  _pickImage((file) => setState(() => aadhaarFrontFile = file)),
             ),
             _uploadKyc(
               title: "Aadhaar Back Image",
               file: aadhaarBackFile,
-              onTap: () => _pickImage((file) => setState(() => aadhaarBackFile = file)),
+              onTap: () =>
+                  _pickImage((file) => setState(() => aadhaarBackFile = file)),
             ),
             _field(panIdCtrl, Icons.perm_identity, "PAN Number"),
             _uploadKyc(
@@ -330,7 +322,11 @@ class _DeliveryRegistrationScreenState
               file: panFile,
               onTap: () => _pickImage((file) => setState(() => panFile = file)),
             ),
-            _field(dlIdCtrl, Icons.drive_eta_outlined, "Driving License Number"),
+            _field(
+              dlIdCtrl,
+              Icons.drive_eta_outlined,
+              "Driving License Number",
+            ),
             _uploadKyc(
               title: "Driving License Image",
               file: dlFile,
@@ -349,11 +345,15 @@ class _DeliveryRegistrationScreenState
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF8B0000),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14)),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                   ),
                   child: isSubmitting
                       ? CircularProgressIndicator(color: Colors.white)
-                      : Text("Register", style: GoogleFonts.poppins(color: Colors.white)),
+                      : Text(
+                          "Register",
+                          style: GoogleFonts.poppins(color: Colors.white),
+                        ),
                 ),
               ),
             ),
@@ -365,76 +365,67 @@ class _DeliveryRegistrationScreenState
     );
   }
 
-void _onRegisterPress() async {
-  if (profileImageFile == null ||
-      aadhaarFrontFile == null ||
-      aadhaarBackFile == null ||
-      panFile == null ||
-      dlFile == null) {
-    Get.snackbar("Error", "Please upload all required documents!",
-        backgroundColor: Colors.red, colorText: Colors.white);
-    return;
-  }
+  void _onRegisterPress() async {
+    if (profileImageFile == null ||
+        aadhaarFrontFile == null ||
+        aadhaarBackFile == null ||
+        panFile == null ||
+        dlFile == null) {
+      Get.snackbar(
+        "Error",
+        "Please upload all required documents!",
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      return;
+    }
 
-  setState(() => isSubmitting = true);
+    setState(() => isSubmitting = true);
 
-  // 1️⃣ Upload to Cloudinary
-  String? profileUrl = await uploadToCloudinary(profileImageFile!);
-  String? adFrontUrl = await uploadToCloudinary(aadhaarFrontFile!);
-  String? adBackUrl = await uploadToCloudinary(aadhaarBackFile!);
-  String? panUrl = await uploadToCloudinary(panFile!);
-  String? dlUrl = await uploadToCloudinary(dlFile!);
+    final success = await auth.registerDeliveryPartner(
+      name: nameCtrl.text.trim(),
+      phone: phoneCtrl.text.trim(),
+      email: emailCtrl.text.trim(),
+      password: passwordCtrl.text.trim(),
+      dob: dob == null
+          ? ""
+          : "${dob!.year}-${dob!.month.toString().padLeft(2, '0')}-${dob!.day.toString().padLeft(2, '0')}",
+      gender: gender,
 
-  // 2️⃣ Check if any upload failed
-  if (profileUrl == null ||
-      adFrontUrl == null ||
-      adBackUrl == null ||
-      panUrl == null ||
-      dlUrl == null) {
-    Get.snackbar("Upload Error", "Failed to upload some documents!",
-        backgroundColor: Colors.red, colorText: Colors.white);
+      addressLine1: addressLine1Ctrl.text.trim(),
+      addressLine2: addressLine2Ctrl.text.trim(),
+      city: cityCtrl.text.trim(),
+      state: stateCtrl.text.trim(),
+      pincode: pincodeCtrl.text.trim(),
+
+      vehicleType: vehicleType,
+      vehicleNumber: vehicleNumberCtrl.text.trim(),
+
+      aadhaarNumber: aadhaarIdCtrl.text.trim(),
+      panNumber: panIdCtrl.text.trim(),
+      dlNumber: dlIdCtrl.text.trim(),
+
+      profileImageFile: profileImageFile!,
+      aadhaarFrontFile: aadhaarFrontFile!,
+      aadhaarBackFile: aadhaarBackFile!,
+      panFile: panFile!,
+      dlFile: dlFile!,
+    );
+
     setState(() => isSubmitting = false);
-    return;
+
+    // 🚀 NAVIGATION ON SUCCESS
+    if (success) {
+      Get.offAll(() => const DeliveryLoginScreen());
+    }
   }
-
-  // 3️⃣ Call API
-  await auth.registerDeliveryPartner(
-    name: nameCtrl.text,
-    phone: phoneCtrl.text,
-    email: emailCtrl.text,
-    password: passwordCtrl.text,
-    dob: dob == null ? "" : dob!.toIso8601String(),
-    gender: gender,
-
-    addressLine1: addressLine1Ctrl.text,
-    addressLine2: addressLine2Ctrl.text,
-    city: cityCtrl.text,
-    state: stateCtrl.text,
-    pincode: pincodeCtrl.text,
-
-    vehicleType: vehicleType,
-    vehicleNumber: vehicleNumberCtrl.text,
-
-    aadhaarNumber: aadhaarIdCtrl.text,
-    panNumber: panIdCtrl.text,
-    dlNumber: dlIdCtrl.text,
-
-    // 4️⃣ Send Cloudinary URLS only
-    profileImageUrl: profileUrl,
-    aadhaarFrontUrl: adFrontUrl,
-    aadhaarBackUrl: adBackUrl,
-    panUrl: panUrl,
-    dlUrl: dlUrl,
-  );
-
-  setState(() => isSubmitting = false);
-}
-
-
 
   Widget _section(String text) => Padding(
     padding: const EdgeInsets.fromLTRB(22, 14, 22, 6),
-    child: Text(text, style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w600)),
+    child: Text(
+      text,
+      style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w600),
+    ),
   );
 
   Widget _field(TextEditingController c, IconData i, String h) => Padding(
@@ -442,7 +433,11 @@ void _onRegisterPress() async {
     child: TextField(controller: c, decoration: _decoration(i, h)),
   );
 
-  Widget _uploadKyc({required String title, required File? file, required VoidCallback onTap}) => Padding(
+  Widget _uploadKyc({
+    required String title,
+    required File? file,
+    required VoidCallback onTap,
+  }) => Padding(
     padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 6),
     child: InkWell(
       onTap: onTap,
@@ -457,7 +452,8 @@ void _onRegisterPress() async {
           children: [
             file == null
                 ? Container(
-                    width: 45, height: 45,
+                    width: 45,
+                    height: 45,
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(6),
@@ -467,12 +463,28 @@ void _onRegisterPress() async {
                   )
                 : ClipRRect(
                     borderRadius: BorderRadius.circular(6),
-                    child: Image.file(file, width: 50, height: 50, fit: BoxFit.cover),
+                    child: Image.file(
+                      file,
+                      width: 50,
+                      height: 50,
+                      fit: BoxFit.cover,
+                    ),
                   ),
             const SizedBox(width: 14),
-            Expanded(child: Text(title, style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600))),
-            Icon(file == null ? Icons.arrow_forward_ios : Icons.check_circle,
-                size: 18, color: file == null ? Colors.grey : Colors.green),
+            Expanded(
+              child: Text(
+                title,
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            Icon(
+              file == null ? Icons.arrow_forward_ios : Icons.check_circle,
+              size: 18,
+              color: file == null ? Colors.grey : Colors.green,
+            ),
           ],
         ),
       ),

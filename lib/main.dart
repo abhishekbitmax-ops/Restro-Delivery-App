@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:restro_deliveryapp/Auth/controller/Authcontroller.dart';
+
 import 'package:restro_deliveryapp/Auth/view/SocketService.dart';
 import 'package:restro_deliveryapp/Auth/view/Splash.dart';
 
 Future<void> main() async {
-  // ✅ STEP 1: MUST be first
+  /// ✅ MUST BE FIRST
   WidgetsFlutterBinding.ensureInitialized();
 
-  // ✅ STEP 2: Status bar setup
+  /// ✅ STATUS BAR
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Color(0xFF8B0000),
@@ -16,13 +18,11 @@ Future<void> main() async {
     ),
   );
 
-  // ✅ STEP 3: Init socket service ONCE (GLOBAL)
-  await Get.putAsync<OrderSocketService>(
-    () async => await OrderSocketService().init(),
-    permanent: true, // ⭐ VERY IMPORTANT
-  );
+  Get.put<AuthController>(AuthController(), permanent: true);
 
-  // ✅ STEP 4: Run app
+  /// ✅ REGISTER SOCKET SERVICE (NOT CONNECT YET)
+  Get.put<OrderSocketService>(OrderSocketService(), permanent: true);
+
   runApp(const MyApp());
 }
 

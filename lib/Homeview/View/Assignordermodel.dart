@@ -13,6 +13,10 @@ class AssignedOrderResponse {
     );
   }
 
+  factory AssignedOrderResponse.fromSocketJson(Map<String, dynamic> json) {
+    return AssignedOrderResponse(success: true, data: OrderData.fromJson(json));
+  }
+
   Map<String, dynamic> toJson() {
     return {'success': success, 'data': data?.toJson()};
   }

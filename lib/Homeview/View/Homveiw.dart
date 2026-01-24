@@ -19,7 +19,8 @@ class DeliveryDashboardScreen extends StatefulWidget {
 }
 
 class _DeliveryDashboardScreenState extends State<DeliveryDashboardScreen> {
-  final AuthController auth = Get.put(AuthController());
+  final AuthController auth = Get.find<AuthController>();
+
   final OrderSocketService socketService = Get.find<OrderSocketService>();
 
   bool isOnline = true;
@@ -33,11 +34,21 @@ class _DeliveryDashboardScreenState extends State<DeliveryDashboardScreen> {
   @override
   void initState() {
     super.initState();
+
     fetchUserName();
     loadOrderData();
 
-    /// 🔥 ONE TIME API HIT (API → SOCKET → UI)
-    auth.getAssignedOrderFromApi();
+    Future.microtask(() async {
+      final socket = Get.find<OrderSocketService>();
+
+      /// ✅ Only show if ACTIVE order exists
+      if (socket.assignedOrder.value?.data != null) {
+        socket.assignedOrder.refresh();
+      } else {
+        /// 🔁 Fetch fresh state from backend
+        await auth.getAssignedOrderFromApi();
+      }
+    });
   }
 
   // ----------------------------------------------------
@@ -193,7 +204,6 @@ class _DeliveryDashboardScreenState extends State<DeliveryDashboardScreen> {
                           ),
                           const SizedBox(height: 18),
 
-                          /// 🔥 REAL-TIME ORDER UI
                           /// ⭐ REAL-TIME ORDER UI (FIXED)
                           Obx(() {
                             final response = socketService.assignedOrder.value;
@@ -278,14 +288,41 @@ class _DeliveryDashboardScreenState extends State<DeliveryDashboardScreen> {
     );
   }
 
+  // bool isOnline = false;
+  bool isToggling = false;
+  Future<void> _toggleOnline() async {
+    if (isToggling) return;
+
+    setState(() => isToggling = true);
+
+    final res = await auth.toggleOnlineStatus();
+
+    if (!mounted) return;
+
+    if (res != null && res["success"] == true) {
+      setState(() {
+        // backend se aaye to use karo, warna flip
+        isOnline = res["data"]?["isOnline"] ?? !isOnline;
+      });
+
+      Get.snackbar(
+        "Status",
+        isOnline ? "You are ONLINE" : "You are OFFLINE",
+        backgroundColor: isOnline ? Colors.green : Colors.red,
+        colorText: Colors.white,
+      );
+    }
+
+    setState(() => isToggling = false);
+  }
+
   // ----------------------------------------------------
   // HEADER
-  // ----------------------------------------------------
   Widget _header(double topPadding) {
     return Container(
       padding: EdgeInsets.only(
         top: topPadding + 18,
-        bottom: 28,
+        bottom: 22,
         left: 20,
         right: 20,
       ),
@@ -298,18 +335,67 @@ class _DeliveryDashboardScreenState extends State<DeliveryDashboardScreen> {
           bottomRight: Radius.circular(36),
         ),
       ),
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: Text(
-          userName == null || userName!.isEmpty
-              ? "Welcome back"
-              : "Welcome back, $userName",
-          style: GoogleFonts.poppins(
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // 👋 LEFT: WELCOME TEXT
+          Expanded(
+            child: Text(
+              userName == null || userName!.isEmpty
+                  ? "Welcome back"
+                  : "Welcome back, $userName",
+              style: GoogleFonts.poppins(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
-        ),
+
+          const SizedBox(width: 12),
+
+          GestureDetector(
+            onTap: _toggleOnline,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: isOnline ? Colors.green : Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.green),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  isToggling
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Icon(
+                          Icons.circle,
+                          size: 10,
+                          color: isOnline ? Colors.white : Colors.red,
+                        ),
+                  const SizedBox(width: 8),
+                  Text(
+                    isOnline ? "ON" : "OFF",
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: isOnline ? Colors.white : Colors.red,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

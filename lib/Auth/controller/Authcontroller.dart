@@ -6,13 +6,13 @@ import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:restro_deliveryapp/Auth/model/authmodel.dart';
-import 'package:restro_deliveryapp/Auth/view/Profile.dart';
 import 'package:restro_deliveryapp/Auth/view/SocketService.dart';
 import 'package:restro_deliveryapp/Homeview/View/Assignordermodel.dart';
 import 'package:restro_deliveryapp/utils/SharedPref.dart';
 import 'package:restro_deliveryapp/utils/api_endpoints.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http_parser/http_parser.dart';
+
 import 'package:restro_deliveryapp/Auth/view/Navbar.dart';
 
 class AuthController extends GetxController {
@@ -39,12 +39,9 @@ class AuthController extends GetxController {
   }
 
   // ----------------------------------------------------
-  // REGISTER DELIVERY PARTNER (FINAL FIXED VERSION)
-  // ----------------------------------------------------
-  // ----------------------------------------------------
   // REGISTER DELIVERY PARTNER  — CLOUDINARY VERSION
   // ----------------------------------------------------
-  Future<void> registerDeliveryPartner({
+  Future<bool> registerDeliveryPartner({
     required String name,
     required String phone,
     required String email,
@@ -65,11 +62,12 @@ class AuthController extends GetxController {
     required String panNumber,
     required String dlNumber,
 
-    String? profileImageUrl,
-    String? aadhaarFrontUrl,
-    String? aadhaarBackUrl,
-    String? panUrl,
-    String? dlUrl,
+    // 🔥 FILES (REQUIRED)
+    required File profileImageFile,
+    required File aadhaarFrontFile,
+    required File aadhaarBackFile,
+    required File panFile,
+    required File dlFile,
   }) async {
     Get.dialog(
       const Center(child: CircularProgressIndicator(color: Colors.red)),
@@ -77,36 +75,75 @@ class AuthController extends GetxController {
     );
 
     try {
-      final url = ApiEndpoint.getUrl(ApiEndpoint.register);
-      var request = http.MultipartRequest("POST", Uri.parse(url));
+      final request = http.MultipartRequest(
+        "POST",
+        Uri.parse(ApiEndpoint.getUrl(ApiEndpoint.register)),
+      );
 
-      // TEXT FIELDS
-      request.fields["name"] = name;
-      request.fields["phone"] = phone;
-      request.fields["email"] = email;
-      request.fields["password"] = password;
-      request.fields["dob"] = dob;
-      request.fields["gender"] = gender;
+      //  DO NOT SET CONTENT-TYPE MANUALLY
+      // http.MultipartRequest handles it itself
 
-      request.fields["addressLine1"] = addressLine1;
-      request.fields["addressLine2"] = addressLine2;
-      request.fields["city"] = city;
-      request.fields["state"] = state;
-      request.fields["pincode"] = pincode;
+      // ---------------- TEXT FIELDS ----------------
+      request.fields.addAll({
+        'name': name,
+        'phone': phone,
+        'password': password,
+        'dob': dob,
+        'gender': gender,
+        'email': email,
 
-      request.fields["vehicleType"] = vehicleType;
-      request.fields["vehicleNumber"] = vehicleNumber;
+        'aadhaarNumber': aadhaarNumber,
+        'panNumber': panNumber,
+        'licenseNumber': dlNumber,
 
-      request.fields["aadhaarNumber"] = aadhaarNumber;
-      request.fields["panNumber"] = panNumber;
-      request.fields["licenseNumber"] = dlNumber;
+        'vehicleType': vehicleType,
+        'vehicleNumber': vehicleNumber,
 
-      // ⭐ SEND CLOUDINARY URLS (exact backend keys)
-      request.fields["profileImage"] = profileImageUrl ?? "";
-      request.fields["aadhaarFrontImage"] = aadhaarFrontUrl ?? "";
-      request.fields["aadhaarBackImage"] = aadhaarBackUrl ?? "";
-      request.fields["panImage"] = panUrl ?? "";
-      request.fields["licenseImage"] = dlUrl ?? "";
+        // 🔥 ADDRESS AS JSON STRING (Postman match)
+        'address': jsonEncode({
+          "type": "home",
+          "street": addressLine1,
+          "area": addressLine2,
+          "city": city,
+          "state": state,
+          "zipCode": pincode,
+        }),
+      });
+
+      // ---------------- FILE FIELDS ----------------
+      request.files.addAll([
+        await http.MultipartFile.fromPath(
+          'profileImage',
+          profileImageFile.path,
+          contentType: MediaType('image', 'jpeg'),
+        ),
+        await http.MultipartFile.fromPath(
+          'aadhaarFrontImage',
+          aadhaarFrontFile.path,
+          contentType: MediaType('image', 'jpeg'),
+        ),
+        await http.MultipartFile.fromPath(
+          'aadhaarBackImage',
+          aadhaarBackFile.path,
+          contentType: MediaType('image', 'jpeg'),
+        ),
+        await http.MultipartFile.fromPath(
+          'panImage',
+          panFile.path,
+          contentType: MediaType('image', 'jpeg'),
+        ),
+        await http.MultipartFile.fromPath(
+          'licenseImage',
+          dlFile.path,
+          contentType: MediaType('image', 'jpeg'),
+        ),
+      ]);
+
+      // 🔍 DEBUG (optional but gold)
+      debugPrint("FIELDS => ${request.fields}");
+      for (var f in request.files) {
+        debugPrint("FILE => ${f.field} : ${f.filename}");
+      }
 
       final response = await request.send();
       final resp = await response.stream.bytesToString();
@@ -114,20 +151,22 @@ class AuthController extends GetxController {
 
       final data = jsonDecode(resp);
 
-      if (response.statusCode == 201 && data["success"] == true) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         Get.snackbar(
           "Success",
-          data["message"],
+          data["message"] ?? "Registration successful",
           backgroundColor: Colors.green,
           colorText: Colors.white,
         );
+        return true; // ✅ SUCCESS
       } else {
         Get.snackbar(
           "Failed",
-          data["message"],
+          data["message"] ?? "Registration failed",
           backgroundColor: Colors.red,
           colorText: Colors.white,
         );
+        return false;
       }
     } catch (e) {
       Get.back();
@@ -137,6 +176,7 @@ class AuthController extends GetxController {
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
+      return false;
     }
   }
 
@@ -483,7 +523,7 @@ class AuthController extends GetxController {
     String otp,
   ) async {
     final String url =
-        "http://192.168.1.108:5004/api/v1/delivery/$orderId/verify-otp";
+        "https://sog.bitmaxtest.com/api/v1/delivery/$orderId/verify-otp";
 
     print("📌 VERIFY OTP PATCH URL → $url");
 
@@ -507,27 +547,6 @@ class AuthController extends GetxController {
     }
   }
 
-  Future<String?> uploadToCloudinary(File file) async {
-    try {
-      final url = Uri.parse(
-        "http://192.168.1.108:5004/v1_1/dp8jfjx7c/image/upload",
-      );
-
-      final request = http.MultipartRequest("POST", url)
-        ..fields["upload_preset"] = "ml_default"
-        ..files.add(await http.MultipartFile.fromPath("file", file.path));
-
-      final res = await request.send();
-      final response = await res.stream.bytesToString();
-      final data = jsonDecode(response);
-
-      return data["secure_url"];
-    } catch (e) {
-      print("CLOUDINARY ERROR: $e");
-      return null;
-    }
-  }
-
   // ⭐ START DELIVERY   METHOD
 
   Future<PickupOrderResponse?> Pickuporder(String orderId) async {
@@ -535,7 +554,7 @@ class AuthController extends GetxController {
       String token = await SharedPre.getAccessToken();
 
       final String url =
-          "http://192.168.1.108:5004/api/v1/delivery/pick-order/$orderId";
+          "https://sog.bitmaxtest.com/api/v1/delivery/pick-order/$orderId";
 
       debugPrint("PICKUP ORDER URL → $url");
 
@@ -565,7 +584,7 @@ class AuthController extends GetxController {
       final token = await SharedPre.getAccessToken();
 
       final response = await http.get(
-        Uri.parse("http://192.168.1.108:5004/api/v1/delivery/assigned-order"),
+        Uri.parse("https://sog.bitmaxtest.com/api/v1/delivery/assigned-order"),
         headers: {
           "Authorization": "Bearer $token",
           "Content-Type": "application/json",
