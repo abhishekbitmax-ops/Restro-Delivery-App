@@ -201,11 +201,12 @@ class AuthController extends GetxController {
         body: jsonEncode({"phone": phone, "password": password}),
       );
 
-      Get.back();
+      Get.back(); // loader close
 
+      final data = jsonDecode(response.body);
+
+      // ✅ SUCCESS LOGIN
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final data = jsonDecode(response.body);
-
         if (data["success"] == true) {
           final token = data["token"];
 
@@ -228,17 +229,52 @@ class AuthController extends GetxController {
         } else {
           Get.snackbar(
             "Login Failed",
-            data["message"],
+            data["message"] ?? "Login failed",
             backgroundColor: Colors.red,
             colorText: Colors.white,
           );
         }
-      } else {
-        Get.snackbar("Error", "Status ${response.statusCode}");
+      }
+      // ❌ 401 UNAUTHORIZED → ACCOUNT NOT VERIFIED
+      else if (response.statusCode == 401) {
+        Get.defaultDialog(
+          title: "Account Not Verified",
+          titleStyle: const TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.red,
+          ),
+          middleText:
+              "Your account is not verified yet.\n\nPlease wait for approval.\n⏳ Approval usually takes 12–24 hours.",
+          middleTextStyle: const TextStyle(fontSize: 15),
+          barrierDismissible: false,
+          confirm: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF8B0000),
+            ),
+            onPressed: () {
+              Get.back(); // close dialog
+            },
+            child: const Text("OK", style: TextStyle(color: Colors.white)),
+          ),
+        );
+      }
+      // ❌ OTHER ERRORS
+      else {
+        Get.snackbar(
+          "Error",
+          data["message"] ?? "Something went wrong",
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
       }
     } catch (e) {
       Get.back();
-      Get.snackbar("Error", e.toString());
+      Get.snackbar(
+        "Error",
+        e.toString(),
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
     }
   }
 
@@ -300,57 +336,97 @@ class AuthController extends GetxController {
       );
 
       if (res.statusCode == 200 || res.statusCode == 201) {
-        var body = jsonDecode(res.body);
-        return DeliveryPartnerProfile.fromJson(body);
+        return DeliveryPartnerProfile.fromJson(jsonDecode(res.body));
       } else {
-        print("Profile API Error: ${res.body}");
+        debugPrint("Profile API Error: ${res.body}");
         return null;
       }
     } catch (e) {
-      print("Profile API Exception: $e");
+      debugPrint("Profile API Exception: $e");
       return null;
     }
   }
 
   // ---------------- EDIT PROFILE API ----------------
   Future<bool> updateProfile({
-    required String name,
-    required String email,
-    required String address,
-    required String pincode,
+    String? name,
+    String? email,
+    String? dob,
+    String? gender,
+
+    // address fields
+    String? street,
+    String? area,
+    String? city,
+    String? state,
+    String? pincode,
+
     File? profileImage,
   }) async {
     try {
-      String token = await SharedPre.getAccessToken(); // ✅ correct
+      final token = await SharedPre.getAccessToken();
 
-      var request = http.MultipartRequest(
-        "POST",
+      final request = http.MultipartRequest(
+        "PATCH",
         Uri.parse(ApiEndpoint.getUrl(ApiEndpoint.editProfile)),
       );
 
       request.headers['Authorization'] = "Bearer $token";
 
-      request.fields['name'] = name;
-      request.fields['email'] = email;
-      request.fields['address'] = address;
-      request.fields['pincode'] = pincode;
+      // ---------------- TEXT FIELDS (ONLY IF NOT EMPTY) ----------------
+      if (name != null && name.isNotEmpty) {
+        request.fields['name'] = name;
+      }
 
+      if (email != null && email.isNotEmpty) {
+        request.fields['email'] = email;
+      }
+
+      if (dob != null && dob.isNotEmpty) {
+        request.fields['dob'] = dob;
+      }
+
+      if (gender != null && gender.isNotEmpty) {
+        request.fields['gender'] = gender;
+      }
+
+      // ---------------- ADDRESS OBJECT ----------------
+      if (street != null ||
+          area != null ||
+          city != null ||
+          state != null ||
+          pincode != null) {
+        request.fields['address'] = jsonEncode({
+          "type": "work",
+          "street": street ?? "",
+          "area": area ?? "",
+          "city": city ?? "",
+          "state": state ?? "",
+          "zipCode": pincode ?? "",
+        });
+      }
+
+      // ---------------- PROFILE IMAGE ----------------
       if (profileImage != null) {
         request.files.add(
-          await http.MultipartFile.fromPath('profileImage', profileImage.path),
+          await http.MultipartFile.fromPath(
+            'profileImage',
+            profileImage.path,
+            contentType: MediaType('image', 'jpeg'),
+          ),
         );
       }
 
-      var response = await request.send();
-      String body = await response.stream.bytesToString();
+      final response = await request.send();
+      final body = await response.stream.bytesToString();
 
-      print("EDIT PROFILE RESPONSE = $body");
+      debugPrint("EDIT PROFILE RESPONSE => $body");
 
-      var json = jsonDecode(body);
+      final json = jsonDecode(body);
 
       return json["success"] == true;
     } catch (e) {
-      print("Edit Profile API Error: $e");
+      debugPrint("EDIT PROFILE ERROR => $e");
       return false;
     }
   }
@@ -523,7 +599,7 @@ class AuthController extends GetxController {
     String otp,
   ) async {
     final String url =
-        "https://sog.bitmaxtest.com/api/v1/delivery/$orderId/verify-otp";
+        "http://192.168.1.108:5004/api/v1/delivery/$orderId/verify-otp";
 
     print("📌 VERIFY OTP PATCH URL → $url");
 
@@ -554,7 +630,7 @@ class AuthController extends GetxController {
       String token = await SharedPre.getAccessToken();
 
       final String url =
-          "https://sog.bitmaxtest.com/api/v1/delivery/pick-order/$orderId";
+          "http://192.168.1.108:5004/api/v1/delivery/pick-order/$orderId";
 
       debugPrint("PICKUP ORDER URL → $url");
 
@@ -584,7 +660,7 @@ class AuthController extends GetxController {
       final token = await SharedPre.getAccessToken();
 
       final response = await http.get(
-        Uri.parse("https://sog.bitmaxtest.com/api/v1/delivery/assigned-order"),
+        Uri.parse("http://192.168.1.108:5004/api/v1/delivery/assigned-order"),
         headers: {
           "Authorization": "Bearer $token",
           "Content-Type": "application/json",
@@ -598,21 +674,26 @@ class AuthController extends GetxController {
 
       final json = jsonDecode(response.body);
 
-      final socketService = Get.find<OrderSocketService>();
-
       /// 🔥 NO ORDER
       if (json["data"] == null) {
-        socketService.assignedOrder.value = null;
+        Get.find<OrderSocketService>().assignedOrder.value = null;
         return null;
       }
 
       /// 🔥 PARSE MODEL
-      final order = AssignedOrderResponse.fromJson(json);
+      final orderResponse = AssignedOrderResponse.fromJson(json);
 
-      /// 🔥 API → SOCKET → UI (single source of truth)
-      socketService.pushOrderFromApi(order);
+      /// 🔥 EXTRACT ORDER ID (BACKEND SAFE)
+      final backendOrderId = orderResponse.data?.order?.id;
+      final displayOrderId = orderResponse.data?.order?.orderId;
 
-      return order;
+      debugPrint("📦 BACKEND ORDER ID => $backendOrderId");
+      debugPrint("🧾 DISPLAY ORDER ID => $displayOrderId");
+
+      /// 🔥 API → SOCKET → UI
+      Get.find<OrderSocketService>().pushOrderFromApi(orderResponse);
+
+      return orderResponse;
     } catch (e) {
       debugPrint("❌ ASSIGNED ORDER API ERROR: $e");
       return null;

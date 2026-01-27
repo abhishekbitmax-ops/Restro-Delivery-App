@@ -48,6 +48,8 @@ dependencies:
   google_maps_flutter: ^2.14.0
   url_launcher: ^6.3.2
   location: ^8.0.1
+  flutter_foreground_task: ^9.2.0
+ 
 
 dev_dependencies:
   flutter_test:

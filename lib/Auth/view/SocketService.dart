@@ -17,6 +17,7 @@ class OrderSocketService extends GetxService {
 
   AssignedOrderResponse? _lastOrder;
   Timer? _heartbeatTimer;
+  bool _isConnected = false;
 
   @override
   void onInit() {
@@ -34,10 +35,21 @@ class OrderSocketService extends GetxService {
   }
 
   Future<OrderSocketService> init() async {
+    if (_isConnected) {
+      debugPrint("⚠️ SOCKET ALREADY CONNECTED");
+      return this;
+    }
+
     final token = await SharedPre.getAccessToken();
+    if (token.isEmpty) {
+      debugPrint("❌ SOCKET INIT FAILED: TOKEN EMPTY");
+      return this;
+    }
+
+    _isConnected = true;
 
     socket = IO.io(
-      "https://sog.bitmaxtest.com/orders",
+      "http://192.168.1.108:5004/orders",
       IO.OptionBuilder()
           .setTransports(['websocket'])
           .setAuth({"token": token})
@@ -91,6 +103,7 @@ class OrderSocketService extends GetxService {
 
     socket.onDisconnect((_) {
       debugPrint("❌ SOCKET DISCONNECTED");
+      _isConnected = false;
       _stopHeartbeat();
     });
 
@@ -111,22 +124,24 @@ class OrderSocketService extends GetxService {
   }
 
   Future<void> _emitLocation() async {
-    final pos = await _getSafeLocation();
-    if (pos == null) return;
+    try {
+      final pos = await _getSafeLocation();
+      if (pos == null) {
+        debugPrint("⚠️ LOCATION NULL, SKIPPING EMIT");
+        return;
+      }
 
-    final currentOrder = assignedOrder.value;
+      final currentOrder = assignedOrder.value;
 
-    socket.emit("UPDATE_LOCATION", {
-      "role": "DELIVERY_PARTNER",
-      "location": {"lat": pos.latitude, "lng": pos.longitude},
-      if (currentOrder?.data != null)
-        "assignedOrder": currentOrder!.data!.toJson(),
-    });
-
-    debugPrint(
-      "📦 ASSIGNED_ORDER → success:${currentOrder?.success}, "
-      "hasData:${currentOrder?.data != null}",
-    );
+      socket.emit("UPDATE_LOCATION", {
+        "role": "DELIVERY_PARTNER",
+        "location": {"lat": pos.latitude, "lng": pos.longitude},
+        if (currentOrder?.data != null)
+          "assignedOrder": currentOrder!.data!.toJson(),
+      });
+    } catch (e) {
+      debugPrint("❌ HEARTBEAT ERROR: $e");
+    }
   }
 
   /// 🔥 API → SOCKET BRIDGE (FIXED)
