@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:restro_deliveryapp/Auth/controller/Authcontroller.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:geolocator/geolocator.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 
 import 'package:restro_deliveryapp/Homeview/View/Assignordermodel.dart';
 import 'package:restro_deliveryapp/utils/SharedPref.dart';
@@ -69,6 +70,13 @@ class OrderSocketService extends GetxService {
 
     socket.on("DELIVERY_ASSIGNED", (data) {
       debugPrint("🔥 DELIVERY_ASSIGNED SOCKET → $data");
+
+      final customOrderId = data["customOrderId"] ?? "UNKNOWN";
+      final backendOrderId = data["orderId"] ?? "UNKNOWN";
+
+      // 🔥 UPDATE FOREGROUND TASK DATA WITH NEW ORDER ID
+      FlutterForegroundTask.saveData(key: 'customOrderId', value: customOrderId);
+      debugPrint("✅ Updated foreground task customOrderId: $customOrderId");
 
       final mappedData = {
         "order": {

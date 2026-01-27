@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:restro_deliveryapp/Auth/view/Navbar.dart';
 import 'package:restro_deliveryapp/Auth/view/SocketService.dart';
+import 'package:restro_deliveryapp/utils/location_helper.dart';
 
 class DeliverySuccessScreen extends StatelessWidget {
   final String orderId;
@@ -11,6 +12,10 @@ class DeliverySuccessScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 🛑 STOP location tracking when delivery is complete
+    Future.delayed(const Duration(milliseconds: 100), () async {
+      await stopDeliveryTracking();
+    });
     return Scaffold(
       backgroundColor: const Color(0xFFF6EEF2),
       body: Center(

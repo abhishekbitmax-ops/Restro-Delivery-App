@@ -7,6 +7,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:restro_deliveryapp/Auth/view/SocketService.dart';
 import 'package:restro_deliveryapp/Homeview/View/Assignordermodel.dart';
 import 'package:restro_deliveryapp/utils/forgroundservice.dart';
+import 'package:restro_deliveryapp/utils/location_helper.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:location/location.dart';
 import 'dart:math';
@@ -26,20 +27,14 @@ class DeliveryScreen extends StatefulWidget {
 
 class _DeliveryScreenState extends State<DeliveryScreen> {
   final AuthController auth = Get.put(AuthController());
+  
+  // 🚀 NEW: Using the simplified location helper
   Future<void> startTrackingService({
     required String token,
     required String orderId,
   }) async {
-    await FlutterForegroundTask.saveData(key: 'token', value: token);
-    await FlutterForegroundTask.saveData(key: 'orderId', value: orderId);
-
-    await FlutterForegroundTask.startService(
-      notificationTitle: "Delivery in progress",
-      notificationText: "Location tracking active",
-      callback: startCallback,
-    );
-
-    debugPrint("🚀 Foreground service started");
+    print("\n📍 Starting delivery tracking...");
+    await startDeliveryTracking(token, orderId);
   }
 
   final List<TextEditingController> _otpControllers = List.generate(
@@ -227,6 +222,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
         onPressed: () async {
           final token = await SharedPre.getAccessToken();
           final backendOrderId = widget.orderData.order?.id;
+          final customOrderId = widget.orderData.order?.orderId; // Get custom order ID (e.g., ORD-2F6A1580)
 
           if (token.isEmpty || backendOrderId == null) {
             Get.snackbar(
@@ -240,7 +236,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
 
           await startTrackingService(
             token: token,
-            orderId: backendOrderId, // 🔥 BACKEND ORDER ID ONLY
+            orderId: customOrderId ?? backendOrderId, // Use customOrderId if available, fallback to backendOrderId
           );
 
           _openGoogleMaps(address);

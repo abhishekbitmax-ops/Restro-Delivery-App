@@ -1,29 +1,115 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:http/http.dart' as http;
+import 'package:restro_deliveryapp/utils/background_http_client.dart';
 
+@pragma('vm:entry-point')
 void startCallback() {
   FlutterForegroundTask.setTaskHandler(LocationTaskHandler());
 }
 
+/// ===============================
+/// INIT FOREGROUND SERVICE
+/// ===============================
+void initForegroundService() {
+  FlutterForegroundTask.init(
+    androidNotificationOptions: AndroidNotificationOptions(
+      id: 888,
+      channelId: 'location_tracking_service',
+      channelName: 'Location Tracking',
+      channelDescription: 'Real-time delivery location tracking',
+      channelImportance: NotificationChannelImportance.LOW,
+      priority: NotificationPriority.LOW,
+      enableVibration: false,
+      playSound: false,
+    ),
+    foregroundTaskOptions: ForegroundTaskOptions(
+      eventAction: ForegroundTaskEventAction.repeat(10000), // Every 10 seconds
+      autoRunOnBoot: true,
+      allowWakeLock: true,
+      allowWifiLock: true,
+    ),
+    iosNotificationOptions: const IOSNotificationOptions(
+      showNotification: false,
+      playSound: false,
+    ),
+  );
+}
+
+/// ===============================
+/// START TRACKING
+/// ===============================
+Future<void> startLocationTracking(String token, String customOrderId) async {
+  print("\n🚀 STARTING LOCATION TRACKING");
+
+  // ❌ WRONG: await initForegroundService();
+  // ✅ CORRECT:
+  initForegroundService();
+
+  await FlutterForegroundTask.saveData(key: 'token', value: token);
+  await FlutterForegroundTask.saveData(key: 'customOrderId', value: customOrderId);
+
+  await FlutterForegroundTask.startService(
+    serviceId: 888,
+    notificationTitle: '📍 DELIVERY TRACKING ACTIVE',
+    notificationText: 'Sending location to server...',
+    callback: startCallback,
+  );
+
+  print("✅ FOREGROUND SERVICE STARTED");
+}
+
+/// ===============================
+/// STOP TRACKING
+/// ===============================
+Future<void> stopLocationTracking() async {
+  print("\n🛑 STOPPING LOCATION TRACKING");
+  await FlutterForegroundTask.stopService();
+}
+
+/// ===============================
+/// TASK HANDLER
+/// ===============================
+@pragma('vm:entry-point')
 class LocationTaskHandler extends TaskHandler {
   String? _token;
   String? _orderId;
 
+  bool _isSending = false;
+  static const int _maxRetries = 3;
+
+  static const String _apiUrl = "http://192.168.1.108:5004/api/v1/location/update-location";
+
+  Future<void> _updateNotificationSafe(String message) async {
+    try {
+      await FlutterForegroundTask.updateService(
+        notificationTitle: '📍 DELIVERY TRACKING',
+        notificationText: message,
+      );
+    } catch (e) {
+      print("⚠️ Notification update failed: $e");
+    }
+  }
+
   @override
   Future<void> onStart(DateTime timestamp, TaskStarter starter) async {
     _token = await FlutterForegroundTask.getData<String>(key: 'token');
-    _orderId = await FlutterForegroundTask.getData<String>(key: 'orderId');
+    _orderId = await FlutterForegroundTask.getData<String>(key: 'customOrderId');
 
-    print("🚀 FOREGROUND SERVICE STARTED");
-    print("🪪 TOKEN => ${_token != null}");
+    print("\n🚀 FOREGROUND SERVICE STARTED");
+    print("🪪 TOKEN => ${_token != null ? 'YES' : 'NO'}");
     print("📦 ORDER ID => $_orderId");
   }
 
   @override
   Future<void> onRepeatEvent(DateTime timestamp) async {
-    print("🔥 onRepeatEvent fired at $timestamp");
+    print("\n🔥 REPEAT EVENT @ $timestamp");
+
+    if (_isSending) {
+      print("⏳ API still running, skipping tick");
+      return;
+    }
 
     try {
       if (_token == null || _orderId == null) {
@@ -33,7 +119,7 @@ class LocationTaskHandler extends TaskHandler {
 
       final serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        print("⚠️ Location service OFF");
+        await _updateNotificationSafe('⚠️ GPS OFF');
         return;
       }
 
@@ -44,37 +130,86 @@ class LocationTaskHandler extends TaskHandler {
 
       if (permission == LocationPermission.denied ||
           permission == LocationPermission.deniedForever) {
-        print("⚠️ Location permission denied");
+        await _updateNotificationSafe('⚠️ Location permission denied');
         return;
       }
 
       final pos = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 10),
       );
 
-      print("📍 LOCATION => ${pos.latitude}, ${pos.longitude}");
+      print("📍 ${pos.latitude}, ${pos.longitude}");
 
-      final uri = Uri.parse(
-        "http://192.168.1.108:5004/api/v1/location/update-location",
-      );
+      _isSending = true;
 
-      final response = await http.post(
-        uri,
+      // NON-BLOCKING
+      _sendLocationUpdate(pos);
+
+    } catch (e) {
+      print("❌ Repeat error => $e");
+      _isSending = false;
+    }
+  }
+
+  Future<void> _sendLocationUpdate(Position pos, [int attempt = 1]) async {
+    try {
+      print("📤 Sending location (Attempt $attempt/$_maxRetries)");
+      print("🌐 URL: $_apiUrl");
+      print("🪪 TOKEN: ${_token?.substring(0, 20)}...");
+      
+      final requestBody = {
+        "orderId": _orderId,
+        "lat": pos.latitude,
+        "lon": pos.longitude,
+        "timestamp": DateTime.now().toIso8601String(),
+      };
+      
+      print("📦 REQUEST BODY: ${jsonEncode(requestBody)}");
+      final response = await BackgroundHttpClient().post(
+        Uri.parse(_apiUrl),
         headers: {
           "Authorization": "Bearer $_token",
           "Content-Type": "application/json",
         },
-        body: jsonEncode({
-          "orderId": _orderId,
-          "lat": pos.latitude,
-          "lon": pos.longitude,
-        }),
+        body: jsonEncode(requestBody),
+        timeout: const Duration(seconds: 15),
       );
 
-      print("📡 API STATUS => ${response.statusCode}");
-      print("📡 API BODY => ${response.body}");
+      print("📡 RESPONSE STATUS: ${response.statusCode}");
+      print("📄 RESPONSE BODY: ${response.body}");
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        print("✅ API SUCCESS ${response.statusCode}");
+        await _updateNotificationSafe('✅ Lat:${pos.latitude.toStringAsFixed(4)} Lon:${pos.longitude.toStringAsFixed(4)}');
+        _isSending = false;
+      } else {
+        print("⚠️ API ERROR ${response.statusCode}");
+
+        if (attempt < _maxRetries) {
+          print("🔄 Retrying in ${2 * attempt}s...");
+          // Schedule retry without blocking
+          Future.delayed(Duration(seconds: 2 * attempt), () {
+            _sendLocationUpdate(pos, attempt + 1);
+          });
+        } else {
+          print("❌ Max retries reached");
+          _isSending = false;
+        }
+      }
     } catch (e) {
-      print("❌ BG ERROR => $e");
+      print("❌ API exception => $e");
+
+      if (attempt < _maxRetries) {
+        print("🔄 Retrying in ${2 * attempt}s...");
+        // Schedule retry without blocking
+        Future.delayed(Duration(seconds: 2 * attempt), () {
+          _sendLocationUpdate(pos, attempt + 1);
+        });
+      } else {
+        print("❌ Max retries reached");
+        _isSending = false;
+      }
     }
   }
 

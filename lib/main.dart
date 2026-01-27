@@ -6,10 +6,15 @@ import 'package:get/get.dart';
 import 'package:restro_deliveryapp/Auth/controller/Authcontroller.dart';
 import 'package:restro_deliveryapp/Auth/view/SocketService.dart';
 import 'package:restro_deliveryapp/Auth/view/Splash.dart';
+import 'package:restro_deliveryapp/utils/forgroundservice.dart';
+import 'package:restro_deliveryapp/utils/app_lifecycle_manager.dart';
 
 Future<void> main() async {
   /// 🔥 VERY IMPORTANT
   WidgetsFlutterBinding.ensureInitialized();
+
+  /// ✅ INITIALIZE APP LIFECYCLE MANAGER (prevents background cancellation)
+  AppLifecycleManager().monitorAppLifecycle();
 
   /// ✅ STATUS BAR
   SystemChrome.setSystemUIOverlayStyle(

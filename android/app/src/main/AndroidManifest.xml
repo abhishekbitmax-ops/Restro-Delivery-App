@@ -1,38 +1,46 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- 🌐 Internet -->
+    <!-- 🌐 INTERNET - Required for API calls in background -->
     <uses-permission android:name="android.permission.INTERNET"/>
 
-    <!-- 📍 Location -->
+    <!-- 📍 LOCATION - Required for background location tracking -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"/>
 
-    <!-- 🔔 Foreground Service -->
+    <!-- 🔔 FOREGROUND SERVICE - Required to keep service running -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION"/>
 
-    <!-- 🔋 Wake lock (🔥 REQUIRED) -->
+    <!-- 🔋 WAKE LOCK - Required to prevent system from killing service -->
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
 
-    <!-- 📡 Network -->
+    <!-- 📡 NETWORK STATE - Monitor network connectivity -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+
+    <!-- 🎯 QUERY PACKAGE - Allow opening external apps like Maps -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"/>
+
+    <!-- 🔌 CHANGE NETWORK STATE - For network connectivity checks -->
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE"/>
 
     <application
         android:name="${applicationName}"
         android:label="restro_deliveryapp"
         android:icon="@mipmap/ic_launcher"
-        android:usesCleartextTraffic="true">
+        android:usesCleartextTraffic="true"
+        android:enableOnBackInvokedCallback="true">
 
         <!-- Google Maps -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="YOUR_GOOGLE_MAP_KEY"/>
 
+        <!-- MAIN ACTIVITY - Does NOT cancel background services when opened from intent -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:launchMode="singleTop"
+            android:launchMode="singleTask"
             android:theme="@style/LaunchTheme"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
@@ -44,7 +52,7 @@
             </intent-filter>
         </activity>
 
-        <!-- ✅ flutter_foreground_task ONLY -->
+        <!-- ✅ FOREGROUND SERVICE - Location tracking service (survives app background) -->
         <service
             android:name="com.pravera.flutter_foreground_task.service.ForegroundService"
             android:exported="false"
