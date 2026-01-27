@@ -33,15 +33,30 @@ class _EditprofileState extends State<Editprofile> {
 
   // ---------- LOAD EXISTING PROFILE DATA ----------
   void _loadExistingUserData() async {
-    var user = await authController.getProfile();
+    final user = await authController.getProfile();
 
     if (user != null && user.data != null) {
-      nameCtrl.text = user.data!.name ?? "";
-      emailCtrl.text = user.data!.email ?? "";
-      addressCtrl.text = user.data!.address?.line1 ?? "";
-      pincodeCtrl.text = user.data!.address?.pincode ?? "";
+      final data = user.data!;
+      final addr = data.address;
 
-      profileImageUrl = user.data!.profileImage ?? "";
+      nameCtrl.text = data.name ?? "";
+      emailCtrl.text = data.email ?? "";
+
+      // ✅ Combine address fields safely
+      addressCtrl.text = addr == null
+          ? ""
+          : [
+              addr.street,
+              addr.area,
+              addr.city,
+              addr.state,
+            ].where((e) => e != null && e!.isNotEmpty).join(", ");
+
+      // ✅ Correct field name
+      pincodeCtrl.text = addr?.zipCode ?? "";
+
+      profileImageUrl = data.profileImage ?? "";
+
       setState(() {});
     }
   }
@@ -60,8 +75,12 @@ class _EditprofileState extends State<Editprofile> {
       if (picked != null) {
         final ext = picked.name.split(".").last.toLowerCase();
         if (ext != "jpg" && ext != "jpeg" && ext != "png") {
-          Get.snackbar("Invalid Image", "Only JPG, JPEG, PNG allowed!",
-              backgroundColor: Colors.red, colorText: Colors.white);
+          Get.snackbar(
+            "Invalid Image",
+            "Only JPG, JPEG, PNG allowed!",
+            backgroundColor: Colors.red,
+            colorText: Colors.white,
+          );
           return;
         }
 
@@ -112,10 +131,12 @@ class _EditprofileState extends State<Editprofile> {
   // ---------------------- UI ----------------------
   @override
   Widget build(BuildContext context) {
-    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-      statusBarColor: Color(0xFF8B0000),
-      statusBarIconBrightness: Brightness.light,
-    ));
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Color(0xFF8B0000),
+        statusBarIconBrightness: Brightness.light,
+      ),
+    );
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -219,9 +240,10 @@ class _EditprofileState extends State<Editprofile> {
             backgroundImage: profileImageFile != null
                 ? FileImage(profileImageFile!)
                 : profileImageUrl != null && profileImageUrl!.isNotEmpty
-                    ? NetworkImage(profileImageUrl!)
-                    : null,
-            child: (profileImageFile == null &&
+                ? NetworkImage(profileImageUrl!)
+                : null,
+            child:
+                (profileImageFile == null &&
                     (profileImageUrl == null || profileImageUrl!.isEmpty))
                 ? const Icon(Icons.person, size: 46, color: Colors.black45)
                 : null,
@@ -279,15 +301,6 @@ class _EditprofileState extends State<Editprofile> {
 
   // ---------------------- SAVE PROFILE API ----------------------
   Future<void> _saveProfile() async {
-    if (nameCtrl.text.isEmpty ||
-        emailCtrl.text.isEmpty ||
-        addressCtrl.text.isEmpty ||
-        pincodeCtrl.text.isEmpty) {
-      Get.snackbar("Error", "Please fill all fields",
-          backgroundColor: Colors.red, colorText: Colors.white);
-      return;
-    }
-
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -298,54 +311,64 @@ class _EditprofileState extends State<Editprofile> {
     bool success = await authController.updateProfile(
       name: nameCtrl.text.trim(),
       email: emailCtrl.text.trim(),
-      address: addressCtrl.text.trim(),
+      street: addressCtrl.text.trim(),
       pincode: pincodeCtrl.text.trim(),
       profileImage: profileImageFile,
     );
 
-    Navigator.pop(context);
-
+    Navigator.pop(context, true); // 👈 tell previous screen to refresh
     if (success) {
-      Get.snackbar("Success", "Profile Updated!",
-          backgroundColor: Colors.green, colorText: Colors.white);
+      Get.snackbar(
+        "Success",
+        "Profile Updated!",
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
 
       Navigator.pop(context);
     } else {
-      Get.snackbar("Error", "Profile update failed!",
-          backgroundColor: Colors.red, colorText: Colors.white);
+      Get.snackbar(
+        "Error",
+        "Profile update failed!",
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
     }
   }
 
   // ---------------------- COMPONENTS ----------------------
   Widget _section(String text) => Padding(
-        padding: const EdgeInsets.fromLTRB(22, 8, 22, 6),
-        child: Text(
-          text,
-          style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w600),
-        ),
-      );
+    padding: const EdgeInsets.fromLTRB(22, 8, 22, 6),
+    child: Text(
+      text,
+      style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w600),
+    ),
+  );
 
-  Widget _field(TextEditingController c, IconData i, String h,
-          {bool obscure = false}) =>
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 8),
-        child: TextField(
-          controller: c,
-          obscureText: obscure,
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: Colors.grey.shade50,
-            hintText: h,
-            prefixIcon: Icon(i, size: 20),
-            border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide:
-                  const BorderSide(color: Color(0xFF8B0000), width: 1.2),
-            ),
-          ),
+  Widget _field(
+    TextEditingController c,
+    IconData i,
+    String h, {
+    bool obscure = false,
+  }) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 8),
+    child: TextField(
+      controller: c,
+      obscureText: obscure,
+      decoration: InputDecoration(
+        filled: true,
+        fillColor: Colors.grey.shade50,
+        hintText: h,
+        prefixIcon: Icon(i, size: 20),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
         ),
-      );
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFF8B0000), width: 1.2),
+        ),
+      ),
+    ),
+  );
 }

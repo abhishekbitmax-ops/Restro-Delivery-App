@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:restro_deliveryapp/Auth/view/SocketService.dart';
 import 'package:restro_deliveryapp/Homeview/View/Assignordermodel.dart';
+import 'package:restro_deliveryapp/utils/forgroundservice.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:location/location.dart';
 import 'dart:math';
@@ -24,6 +26,21 @@ class DeliveryScreen extends StatefulWidget {
 
 class _DeliveryScreenState extends State<DeliveryScreen> {
   final AuthController auth = Get.put(AuthController());
+  Future<void> startTrackingService({
+    required String token,
+    required String orderId,
+  }) async {
+    await FlutterForegroundTask.saveData(key: 'token', value: token);
+    await FlutterForegroundTask.saveData(key: 'orderId', value: orderId);
+
+    await FlutterForegroundTask.startService(
+      notificationTitle: "Delivery in progress",
+      notificationText: "Location tracking active",
+      callback: startCallback,
+    );
+
+    debugPrint("🚀 Foreground service started");
+  }
 
   final List<TextEditingController> _otpControllers = List.generate(
     4,
@@ -207,7 +224,27 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
             fontWeight: FontWeight.w600,
           ),
         ),
-        onPressed: () => _openGoogleMaps(address),
+        onPressed: () async {
+          final token = await SharedPre.getAccessToken();
+          final backendOrderId = widget.orderData.order?.id;
+
+          if (token.isEmpty || backendOrderId == null) {
+            Get.snackbar(
+              "Error",
+              "Unable to start tracking",
+              backgroundColor: Colors.red,
+              colorText: Colors.white,
+            );
+            return;
+          }
+
+          await startTrackingService(
+            token: token,
+            orderId: backendOrderId, // 🔥 BACKEND ORDER ID ONLY
+          );
+
+          _openGoogleMaps(address);
+        },
       ),
     );
   }

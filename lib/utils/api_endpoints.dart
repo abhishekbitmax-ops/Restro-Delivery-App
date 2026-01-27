@@ -1,6 +1,6 @@
 class ApiEndpoint {
   // 🌍 Base API URL (for all API requests)
-  static const String baseUrl = "https://sog.bitmaxtest.com/api/v1/delivery";
+  static const String baseUrl = "http://192.168.1.108:5004/api/v1/delivery";
 
   //Patient App Endpoints
 
@@ -10,8 +10,8 @@ class ApiEndpoint {
   static const String toggleOnline = "/online-offline";
 
   static const String getprofile = "/profile";
-  static const String editProfile = "/edit-profile"; // ⭐ Added
-  static const String changePassword = "/change-password"; // ⭐ Addedq
+  static const String editProfile = "/edit-profile";
+  static const String changePassword = "/change-password";
 
   // ⭐ NEW ORDER APIs
   static const String activeOrder = "/active-order";

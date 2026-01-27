@@ -155,7 +155,10 @@ class _DeliveryDashboardScreenState extends State<DeliveryDashboardScreen> {
     );
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F6F6),
+      backgroundColor: isOnline
+          ? const Color(0xFFEAF0FF) // 🔵 light blue when ONLINE
+          : const Color(0xFFF6F6F6),
+
       body: isLoading
           ? _shimmer(topPadding)
           : Column(
@@ -355,47 +358,78 @@ class _DeliveryDashboardScreenState extends State<DeliveryDashboardScreen> {
 
           const SizedBox(width: 12),
 
-          GestureDetector(
+          onlineStatusButton(
+            isOnline: isOnline,
+            isLoading: isToggling,
             onTap: _toggleOnline,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 250),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(
-                color: isOnline ? Colors.green : Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.green),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  isToggling
-                      ? const SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : Icon(
-                          Icons.circle,
-                          size: 10,
-                          color: isOnline ? Colors.white : Colors.red,
-                        ),
-                  const SizedBox(width: 8),
-                  Text(
-                    isOnline ? "ON" : "OFF",
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: isOnline ? Colors.white : Colors.red,
-                    ),
-                  ),
-                ],
-              ),
-            ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget onlineStatusButton({
+    required bool isOnline,
+    required bool isLoading,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: isLoading ? null : onTap,
+      child: Container(
+        width: 80,
+        height: 42,
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: isOnline ? const Color(0xFFBFD1FF) : Colors.grey.shade300,
+          borderRadius: BorderRadius.circular(30),
+        ),
+        child: Stack(
+          children: [
+            /// TEXT
+            Align(
+              alignment: isOnline
+                  ? Alignment.centerRight
+                  : Alignment.centerLeft,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                child: Text(
+                  isOnline ? "ON" : "OFF",
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
+              ),
+            ),
+
+            /// SLIDING CIRCLE
+            AnimatedAlign(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeInOut,
+              alignment: isOnline
+                  ? Alignment.centerRight
+                  : Alignment.centerLeft,
+              child: Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: isOnline ? const Color(0xFF3F6DF6) : Colors.grey,
+                  shape: BoxShape.circle,
+                ),
+                child: isLoading
+                    ? const Padding(
+                        padding: EdgeInsets.all(8),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : null,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
