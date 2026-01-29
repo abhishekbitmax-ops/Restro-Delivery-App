@@ -21,7 +21,7 @@ await stopDeliveryTracking();
 // 2️⃣ Every 5 SECONDS, the service will:
 //    - Get current GPS location
 //    - Prepare location data (lat, lon, timestamp)
-//    - Send to API: http://192.168.1.108:5004/api/v1/location/update-location
+//    - Send to API: https://sog.bitmaxtest.com/api/v1/location/update-location
 //    - Update notification with current coordinates
 
 // 3️⃣ If API call FAILS:

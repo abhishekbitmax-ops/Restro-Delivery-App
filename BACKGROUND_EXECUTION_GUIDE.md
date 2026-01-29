@@ -147,7 +147,7 @@ Using `BackgroundHttpClient()`:
 // - Screen turning off
 
 final response = await BackgroundHttpClient().post(
-  Uri.parse('http://192.168.1.108:5004/api/v1/location/update-location'),
+  Uri.parse('https://sog.bitmaxtest.com/api/v1/location/update-location'),
   headers: {
     "Authorization": "Bearer $token",
     "Content-Type": "application/json",

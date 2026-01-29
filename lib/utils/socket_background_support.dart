@@ -55,7 +55,7 @@ extension SocketBackgroundSupport on IO.Socket {
 ///     super.onInit();
 ///     
 ///     // Initialize socket with background support
-///     socket = IO.io('http://192.168.1.108:5004', <String, dynamic>{
+///     socket = IO.io('https://sog.bitmaxtest.com', <String, dynamic>{
 ///       'transports': ['websocket'],
 ///       'autoConnect': true,
 ///       'reconnectionDelay': 1000,
@@ -65,7 +65,7 @@ extension SocketBackgroundSupport on IO.Socket {
 ///     });
 ///     
 ///     socket.connectWithBackgroundSupport(
-///       url: 'http://192.168.1.108:5004',
+///       url: 'https://sog.bitmaxtest.com',
 ///     );
 ///     
 ///     _setupListeners();

@@ -27,20 +27,16 @@ class DeliveryScreen extends StatefulWidget {
 
 class _DeliveryScreenState extends State<DeliveryScreen> {
   final AuthController auth = Get.put(AuthController());
-  
-  // 🚀 NEW: Using the simplified location helper
+
   Future<void> startTrackingService({
     required String token,
     required String orderId,
   }) async {
-    print("\n📍 Starting delivery tracking...");
     await startDeliveryTracking(token, orderId);
   }
 
-  final List<TextEditingController> _otpControllers = List.generate(
-    4,
-    (_) => TextEditingController(),
-  );
+  final List<TextEditingController> _otpControllers =
+      List.generate(4, (_) => TextEditingController());
   final List<FocusNode> _focusNodes = List.generate(4, (_) => FocusNode());
 
   LocationData? _currentLocation;
@@ -76,31 +72,32 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _orderInfoCard(orderId, status, pickedAt),
-                  const SizedBox(height: 20),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 350),
+                child: Column(
+                  key: const ValueKey("delivery_body"),
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _animatedCard(_orderInfoCard(orderId, status, pickedAt)),
+                    const SizedBox(height: 16),
 
-                  _customerCard(customer, address),
-                  const SizedBox(height: 16),
+                    _animatedCard(_customerCard(customer, address)),
+                    const SizedBox(height: 12),
 
-                  if (address?.lat != null && address?.lng != null)
-                    _trackMapButton(address!),
+                    if (address?.lat != null && address?.lng != null)
+                      _animatedCard(_trackMapButton(address!)),
 
-                  const SizedBox(height: 20),
+                    const SizedBox(height: 12),
 
-                  _itemsCard(items),
-                  const SizedBox(height: 20),
+                    _animatedCard(_itemsCard(items)),
+                    const SizedBox(height: 12),
 
-                  _paymentCard(amount),
-                  const SizedBox(height: 20),
+                    _animatedCard(_paymentCard(amount)),
+                    const SizedBox(height: 12),
 
-                  _timelineCard(data),
-                  const SizedBox(height: 20),
-
-                  _otpSection(),
-                ],
+                    _animatedCard(_otpSection()),
+                  ],
+                ),
               ),
             ),
           ),
@@ -113,33 +110,49 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
   // ---------------- HEADER ----------------
   Widget _header(String orderId) {
     return Container(
-      height: 130,
+      height: 140,
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      color: const Color(0xFF8B0000),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              InkWell(
-                onTap: () => Get.back(),
-                child: const Icon(Icons.arrow_back, color: Colors.white),
-              ),
-              Text(
-                "Order ID: $orderId",
-                style: GoogleFonts.poppins(fontSize: 12, color: Colors.white70),
-              ),
-            ],
-          ),
-          CircleAvatar(
-            radius: 28,
-            backgroundColor: Colors.white,
-            child: ClipOval(
-              child: Image.asset("assets/images/restro_logo.jpg"),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF7A0000), Color(0xFFB11212)],
+        ),
+      ),
+      child: SafeArea(
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                InkWell(
+                  borderRadius: BorderRadius.circular(30),
+                  onTap: () => Get.back(),
+                  child: const Padding(
+                    padding: EdgeInsets.all(8),
+                    child:
+                        Icon(Icons.arrow_back, color: Colors.white, size: 22),
+                  ),
+                ),
+                
+              ],
             ),
-          ),
-        ],
+            TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0.8, end: 1),
+              duration: const Duration(milliseconds: 400),
+              curve: Curves.easeOutBack,
+              builder: (context, scale, child) {
+                return Transform.scale(scale: scale, child: child);
+              },
+              child: CircleAvatar(
+                radius: 30,
+                backgroundColor: Colors.white,
+                child: ClipOval(
+                  child: Image.asset("assets/images/restro_logo.jpg"),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -170,7 +183,12 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
               fontSize: 14,
             ),
           ),
-          Expanded(child: Text(value, style: GoogleFonts.poppins())),
+          Expanded(
+            child: Text(
+              value,
+              style: GoogleFonts.poppins(fontSize: 13),
+            ),
+          ),
         ],
       ),
     );
@@ -182,21 +200,15 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            "Customer Details",
-            style: GoogleFonts.poppins(
-              fontWeight: FontWeight.w700,
-              fontSize: 15,
-            ),
-          ),
+          _sectionTitle("Customer Details"),
           const SizedBox(height: 12),
           _infoRow("Name", customer?.name ?? "-"),
           _infoRow("Phone", customer?.phone ?? "-"),
           _infoRow(
             "Address",
             "${address?.addressLine ?? ""}, "
-                "${address?.city ?? ""} - "
-                "${address?.pincode ?? ""}",
+            "${address?.city ?? ""} - "
+            "${address?.pincode ?? ""}",
           ),
         ],
       ),
@@ -209,7 +221,11 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
       child: ElevatedButton.icon(
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF8B0000),
-          minimumSize: const Size(double.infinity, 48),
+          minimumSize: const Size(double.infinity, 52),
+          elevation: 4,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
         ),
         icon: const Icon(Icons.map, color: Colors.white),
         label: Text(
@@ -222,7 +238,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
         onPressed: () async {
           final token = await SharedPre.getAccessToken();
           final backendOrderId = widget.orderData.order?.id;
-          final customOrderId = widget.orderData.order?.orderId; // Get custom order ID (e.g., ORD-2F6A1580)
+          final customOrderId = widget.orderData.order?.orderId;
 
           if (token.isEmpty || backendOrderId == null) {
             Get.snackbar(
@@ -236,7 +252,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
 
           await startTrackingService(
             token: token,
-            orderId: customOrderId ?? backendOrderId, // Use customOrderId if available, fallback to backendOrderId
+            orderId: customOrderId ?? backendOrderId,
           );
 
           _openGoogleMaps(address);
@@ -278,20 +294,15 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            "Items",
-            style: GoogleFonts.poppins(
-              fontWeight: FontWeight.w700,
-              fontSize: 15,
-            ),
-          ),
+          _sectionTitle("Items"),
           const SizedBox(height: 12),
           ...items.map(
             (i) => Padding(
               padding: const EdgeInsets.symmetric(vertical: 6),
               child: Row(
                 children: [
-                  const Icon(Icons.fastfood, color: Colors.red, size: 20),
+                  const Icon(Icons.fastfood,
+                      color: Color(0xFF8B0000), size: 20),
                   const SizedBox(width: 10),
                   Expanded(child: Text(i.name ?? "")),
                   Text("x${i.quantity ?? 1}"),
@@ -310,55 +321,13 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            "Grand Total",
-            style: GoogleFonts.poppins(
-              fontWeight: FontWeight.w600,
-              fontSize: 15,
-            ),
-          ),
+          _sectionTitle("Grand Total"),
           Text(
             "₹$amount",
             style: GoogleFonts.poppins(
               fontWeight: FontWeight.w700,
               fontSize: 16,
-              color: Colors.green,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ---------------- TIMELINE ----------------
-  Widget _timelineCard(OrderData data) {
-    return _cardContainer(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            "Order Timeline",
-            style: GoogleFonts.poppins(
-              fontWeight: FontWeight.w700,
-              fontSize: 15,
-            ),
-          ),
-          const SizedBox(height: 12),
-          ...?data.order?.timeline?.map(
-            (t) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                children: [
-                  const Icon(Icons.check_circle, size: 18, color: Colors.green),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      "${t.status} (${t.at})",
-                      style: GoogleFonts.poppins(fontSize: 13),
-                    ),
-                  ),
-                ],
-              ),
+              color: Colors.green.shade700,
             ),
           ),
         ],
@@ -372,13 +341,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            "Enter Delivery OTP",
-            style: GoogleFonts.poppins(
-              fontWeight: FontWeight.w700,
-              fontSize: 15,
-            ),
-          ),
+          _sectionTitle("Enter Delivery OTP"),
           const SizedBox(height: 14),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -390,34 +353,41 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
   }
 
   Widget _otpBox(int index) {
-    return SizedBox(
-      width: 55,
-      child: TextField(
-        controller: _otpControllers[index],
-        focusNode: _focusNodes[index],
-        keyboardType: TextInputType.number,
-        textAlign: TextAlign.center,
-        maxLength: 1,
-        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-        decoration: _inputDecoration(),
-        onChanged: (value) {
-          _checkOtp();
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.9, end: 1),
+      duration: const Duration(milliseconds: 250),
+      builder: (context, scale, child) {
+        return Transform.scale(scale: scale, child: child);
+      },
+      child: SizedBox(
+        width: 55,
+        child: TextField(
+          controller: _otpControllers[index],
+          focusNode: _focusNodes[index],
+          keyboardType: TextInputType.number,
+          textAlign: TextAlign.center,
+          maxLength: 1,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          decoration: _inputDecoration(),
+          onChanged: (value) {
+            _checkOtp();
 
-          // 👉 Move to next box
-          if (value.isNotEmpty && index < _focusNodes.length - 1) {
-            FocusScope.of(context).requestFocus(_focusNodes[index + 1]);
-          }
+            if (value.isNotEmpty && index < _focusNodes.length - 1) {
+              FocusScope.of(context)
+                  .requestFocus(_focusNodes[index + 1]);
+            }
 
-          // 👉 Last box → close keyboard
-          if (value.isNotEmpty && index == _focusNodes.length - 1) {
-            FocusScope.of(context).unfocus();
-          }
+            if (value.isNotEmpty &&
+                index == _focusNodes.length - 1) {
+              FocusScope.of(context).unfocus();
+            }
 
-          // 👉 Backspace → move to previous
-          if (value.isEmpty && index > 0) {
-            FocusScope.of(context).requestFocus(_focusNodes[index - 1]);
-          }
-        },
+            if (value.isEmpty && index > 0) {
+              FocusScope.of(context)
+                  .requestFocus(_focusNodes[index - 1]);
+            }
+          },
+        ),
       ),
     );
   }
@@ -425,17 +395,29 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
   // ---------------- COMPLETE ----------------
   Widget _bottomButtons(String orderId) {
     return SafeArea(
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          minimumSize: const Size(double.infinity, 50),
-          backgroundColor: const Color(0xFF8B0000),
-        ),
-        onPressed: isOtpValid ? () => _verifyOtp(orderId) : null,
-        child: Text(
-          "Complete Delivery",
-          style: GoogleFonts.poppins(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
+      child: TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0.95, end: 1),
+        duration: const Duration(milliseconds: 300),
+        builder: (context, scale, child) {
+          return Transform.scale(scale: scale, child: child);
+        },
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            minimumSize: const Size(double.infinity, 54),
+            backgroundColor: const Color(0xFF8B0000),
+            elevation: 6,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+          ),
+          onPressed: isOtpValid ? () => _verifyOtp(orderId) : null,
+          child: Text(
+            "Complete Delivery",
+            style: GoogleFonts.poppins(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+              fontSize: 15,
+            ),
           ),
         ),
       ),
@@ -454,7 +436,6 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
     Get.back();
 
     if (result?["success"] == true) {
-      /// 🔥 CLEAR SOCKET STATE
       final socket = Get.find<OrderSocketService>();
       socket.assignedOrder.value = null;
 
@@ -472,15 +453,46 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
   }
 
   // ---------------- HELPERS ----------------
+  Widget _animatedCard(Widget child) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeOutCubic,
+      builder: (context, value, _) {
+        return Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, 20 * (1 - value)),
+            child: child,
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _sectionTitle(String text) {
+    return Text(
+      text,
+      style: GoogleFonts.poppins(
+        fontWeight: FontWeight.w700,
+        fontSize: 15,
+      ),
+    );
+  }
+
   Widget _cardContainer({required Widget child}) {
     return Container(
-      padding: const EdgeInsets.all(16),
-      margin: const EdgeInsets.only(bottom: 15),
+      padding: const EdgeInsets.all(18),
+      margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         boxShadow: [
-          BoxShadow(blurRadius: 10, color: Colors.black12.withOpacity(0.1)),
+          BoxShadow(
+            blurRadius: 16,
+            color: Colors.black.withOpacity(0.08),
+            offset: const Offset(0, 8),
+          ),
         ],
       ),
       child: child,
@@ -493,7 +505,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
       filled: true,
       fillColor: const Color(0xFFF7F7F7),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         borderSide: BorderSide.none,
       ),
     );
@@ -535,8 +547,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
     final dLat = _degToRad(lat2 - lat1);
     final dLon = _degToRad(lon2 - lon1);
 
-    final a =
-        sin(dLat / 2) * sin(dLat / 2) +
+    final a = sin(dLat / 2) * sin(dLat / 2) +
         cos(_degToRad(lat1)) *
             cos(_degToRad(lat2)) *
             sin(dLon / 2) *

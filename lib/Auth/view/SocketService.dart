@@ -50,7 +50,7 @@ class OrderSocketService extends GetxService {
     _isConnected = true;
 
     socket = IO.io(
-      "http://192.168.1.108:5004/orders",
+      "https://sog.bitmaxtest.com/orders",
       IO.OptionBuilder()
           .setTransports(['websocket'])
           .setAuth({"token": token})

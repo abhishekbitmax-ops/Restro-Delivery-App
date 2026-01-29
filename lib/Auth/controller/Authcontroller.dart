@@ -599,7 +599,7 @@ class AuthController extends GetxController {
     String otp,
   ) async {
     final String url =
-        "http://192.168.1.108:5004/api/v1/delivery/$orderId/verify-otp";
+        "https://sog.bitmaxtest.com/api/v1/delivery/$orderId/verify-otp";
 
     print("📌 VERIFY OTP PATCH URL → $url");
 
@@ -630,7 +630,7 @@ class AuthController extends GetxController {
       String token = await SharedPre.getAccessToken();
 
       final String url =
-          "http://192.168.1.108:5004/api/v1/delivery/pick-order/$orderId";
+          "https://sog.bitmaxtest.com/api/v1/delivery/pick-order/$orderId";
 
       debugPrint("PICKUP ORDER URL → $url");
 
@@ -660,7 +660,7 @@ class AuthController extends GetxController {
       final token = await SharedPre.getAccessToken();
 
       final response = await http.get(
-        Uri.parse("http://192.168.1.108:5004/api/v1/delivery/assigned-order"),
+        Uri.parse("https://sog.bitmaxtest.com/api/v1/delivery/assigned-order"),
         headers: {
           "Authorization": "Bearer $token",
           "Content-Type": "application/json",

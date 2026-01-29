@@ -79,7 +79,7 @@ class LocationTaskHandler extends TaskHandler {
   bool _isSending = false;
   static const int _maxRetries = 3;
 
-  static const String _apiUrl = "http://192.168.1.108:5004/api/v1/location/update-location";
+  static const String _apiUrl = "https://sog.bitmaxtest.com/api/v1/location/update-location";
 
   Future<void> _updateNotificationSafe(String message) async {
     try {

@@ -44,7 +44,7 @@ This will:
 
 ## 📡 API Endpoint Called
 
-**URL:** `http://192.168.1.108:5004/api/v1/location/update-location`
+**URL:** `https://sog.bitmaxtest.com/api/v1/location/update-location`
 
 **Sent every 5 seconds with:**
 ```json
@@ -124,7 +124,7 @@ You'll see:
 - Check that token and orderId are valid
 
 ### API Calls Not Working?
-- Check device can reach `http://192.168.1.108:5004`
+- Check device can reach `https://sog.bitmaxtest.com`
 - Check API token is valid
 - Check OrderID format matches your backend
 - Check console logs for error messages
@@ -177,7 +177,7 @@ To change:
 💾 Saved OrderId: ORDER_12345
 ✅✅✅ LOCATION SERVICE STARTED SUCCESSFULLY ✅✅✅
 📍 Location updates: EVERY 5 SECONDS
-🌐 API: http://192.168.1.108:5004/api/v1/location/update-location
+🌐 API: https://sog.bitmaxtest.com/api/v1/location/update-location
 ⏳ Service runs in BACKGROUND even when app is closed
 
 [After 5 seconds...]
